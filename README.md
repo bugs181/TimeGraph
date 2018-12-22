@@ -11,7 +11,7 @@ This module goes a little further than the original TimeGraph library by providi
 * No special methods needed, works with all Gun methods (what users are used to)
 * Leaves nested user data unmodified, building upon a single timegraph property in that node.
 * TimePlots allow you to discover and traverse TimeGraphs very quickly with highly interconnected data.
-* Subset special API methods for filtering and working with TimeGraphs. Can be built upon further.
+* Subset of special API methods for filtering and working with TimeGraphs. Can be built upon further.
 * Can be used in conjunction with other Date/Time libraries like [moment.js](http://momentjs.com)
 
 <br>
