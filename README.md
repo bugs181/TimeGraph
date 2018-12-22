@@ -122,6 +122,7 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
 
     var today = new Date()
     var yesterday = new Date(today.setDate(today.getDate() - 1))
+    
     const app = gun.get('app').time(null, yesterday)
     app.get('people').set({ name: 'Levi' })
     app.get('people').set({ name: 'Mark' })
