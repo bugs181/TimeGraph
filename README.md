@@ -1,9 +1,10 @@
+# Work in Progress
+
 # TimeGraph
 TimeGraph library for the [Gun TimeGraph bounty](https://gun.eco/docs/Bounty#-5k-reward-for-timegraph)
 
 # Info:
-This module goes a little further than the original TimeGraph library by giving users methods
-// to work with time-data, streamed to their normal gun operations.
+This module goes a little further than the original TimeGraph library by providing methods to work with time-data, streamed to normal gun operations.
 
 # Features:
 * TimeGraphs can be synced across peers. Can build a wire adapter to filter them out if you so desire.
@@ -11,6 +12,13 @@ This module goes a little further than the original TimeGraph library by giving 
 * Leaves nested user data unmodified, building upon a single timegraph property in that node.
 * Plotting allows you to discover TimeGraphs very quickly with highly interconnected data.
 * Subset special API methods for filtering and working with TimeGraphs. Can be built upon further.
+* Can be used in conjunction with other Date/Time libraries like [moment.js](http://momentjs.com)
+
+<br>
+
+# Pre-requisits:
+
+    var node = gun.get('app')
 
 <br>
 
@@ -91,3 +99,31 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
         }
       }
     }
+
+# Examples:
+## Insert data into TimeGraph
+
+    const app = gun.get('app').time()
+    app.get('people').set({ name: 'Levi' })
+    app.get('people').set({ name: 'Mark' })
+    
+## Retrieve data from TimeGraph
+
+    const app = gun.get('app').time()
+    app.get('people').map().once(console.log)
+
+## Insert valid data
+
+    const app = gun.get('app').time(Date.now())
+    app.get('people').set({ name: 'Levi' })
+    app.get('people').set({ name: 'Mark' })
+
+## Insert invalid data (outside of time bounds)
+
+    var today = new Date()
+    var yesterday = new Date(today.setDate(today.getDate() - 1))
+    const app = gun.get('app').time(yesterday)
+    app.get('people').set({ name: 'Levi' })
+    app.get('people').set({ name: 'Mark' })
+
+## More examples coming soon
