@@ -16,7 +16,7 @@ This module goes a little further than the original TimeGraph library by providi
 
 <br>
 
-# Pre-requisits:
+# Prerequisits:
 
     var node = gun.get('app')
 
