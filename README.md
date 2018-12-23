@@ -36,6 +36,7 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 * `node.time(startDate, stopDate)`
 * `node.time(startDate, null)`
 * `node.time(null, stopDate)`
+* `node.time(null, null)`
 
 <br>
 
