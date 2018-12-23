@@ -1,0 +1,26 @@
+{
+  "name": "timegraph",
+  "version": "1.0.0",
+  "description": "TimeGraph implementation for Gun",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "homepage": "https://github.com/bugs181/TimeGraph#readme",
+  "keywords": [
+    "gun",
+    "gundb",
+    "timegraph",
+    "database",
+    "time"
+  ],
+  "author": "Levi Roberts",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bugs181/TimeGraph/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bugs181/TimeGraph.git"
+  }
+}
