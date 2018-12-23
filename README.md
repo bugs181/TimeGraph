@@ -128,4 +128,14 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
     app.get('people').set({ name: 'Levi' })
     app.get('people').set({ name: 'Mark' })
 
+## Backward compatibility shim
+
+    app.get('people').get('timegraph').map().on((graphItem) => {
+      console.log(graphItem.soul) // Soul/key of item
+      console.log(graphItem.date) // Serializable UTC timestamp
+
+      // Retrieve new item
+      app.get('people').get(graphItem.soul).once(console.log)
+    })
+
 ## More examples coming soon
