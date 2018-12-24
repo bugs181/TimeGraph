@@ -60,7 +60,7 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 
 # Graphing:
 * `node.time().get` : Retrieve data as normal with TimeGraph filtering if provided. Does not affect children nodes.
-* `node.time().put` : Put data into TimeGraph index using filter, if outside of bounds nothing is pushed into gun.
+* `node.time().put` : Put data into TimeGraph index using filter, if outside of bounds nothing is pushed into gun if `enforceData` is provided via opts.
 * `node.time().set` : Same as put
 
 <br>
