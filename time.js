@@ -41,7 +41,7 @@
           return gun.put.apply(this, arguments) // Ref to another node, skip for timegraph, we will catch it later.
 
         var nodeData = (data && data._) || (data && as && as.data && as.data._) || (data && as && as.item && as.item.data)
-        var timegraphSoul = nodeData && nodeData.soul
+        var timegraphSoul = nodeData && nodeData.soul || (this._ && this._.get)
 
         var proxyCall = gun.put.apply(this, arguments)
         var parent = proxyCall.back(1)
