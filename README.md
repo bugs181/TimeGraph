@@ -1,10 +1,12 @@
-# Work in Progress
+# !!! Work in Progress !!!
 
 # TimeGraph
 TimeGraph library for the [Gun TimeGraph bounty](https://gun.eco/docs/Bounty#-5k-reward-for-timegraph)
 
-# Info:
-This module goes a little further than the original TimeGraph library by providing methods to work with time-data, streamed to normal gun operations.
+# Notes:
+* Adds special TimeGraph indexes to the root of Gun.
+* This addition goes a little further than the original TimeGraph library by providing methods to work with time-data, streamed to normal gun operations.
+* Shim provided for Backwards compatibility with existing API
 
 # Features:
 * TimeGraphs can be synced across peers. Can build a wire adapter to filter them out if you so desire.
@@ -13,7 +15,7 @@ This module goes a little further than the original TimeGraph library by providi
 * TimePlots allow you to discover and traverse TimeGraphs very quickly with highly interconnected data.
 * Subset of special API methods for filtering and working with TimeGraphs. Can be built upon further.
 * Can be used in conjunction with other Date/Time libraries like [moment.js](http://momentjs.com)
-* Custom Date formatters/serializers
+* Custom Date formatters/serializers (WIP) `dateFormatter` & `dateCompare`
 
 <br>
 
