@@ -1,10 +1,16 @@
 ;(function() {
-	var Gun = (typeof window !== "undefined") ? window.Gun : require('gun/gun')
-  var ify = Gun.node.ify, u
+  var Gun = (typeof window !== 'undefined') ? window.Gun : require('gun/gun')
+  var ify = Gun.node.ify
 
-	Gun.chain.timegraph = function(startDateOpt, stopDateOpt) {
-    "use strict"
+  if (!Gun)
+    throw new Error('TimeGraph is meant to be used with Gun')
+
+  Gun.chain.timegraph = function(startDateOpt, stopDateOpt) {
+    'use strict'
+
     var gun = this, root = gun.back(-1)
+    var opts = gun && gun._ && gun._.root && gun._.root.opt
+    var enforceData = opts.enforceData
 
     var startDate, stopDate
     if (startDateOpt && (startDateOpt instanceof Date || typeof startDateOpt === 'number' || typeof startDateOpt === 'string'))
@@ -16,77 +22,43 @@
     var timeMethods = {
 
       /* BEGIN UN-NEEDED METHODS */
+      // TODO: find all functions inside nodeProxyPoly and proxy them with timeMethods. We don't need map; filtering is taken care of in .on and .once
       get: function() {
-        var proxyCall = gun.get.apply(this, arguments)
-        return nodeProxyPoly(proxyCall, timeMethods)
+        return nodeProxyPoly(gun.get.apply(this, arguments), timeMethods)
       },
 
       map: function() {
-        // TODO: find all functions inside nodeProxyPoly and proxy them with timeMethods. We don't need map; filtering is taken care of in .on and .once
-        var proxyCall = gun.map.apply(this, arguments)
-        return nodeProxyPoly(proxyCall, timeMethods)
+        return nodeProxyPoly(gun.map.apply(this, arguments), timeMethods)
+      },
+
+      set: function() {
+        return nodeProxyPoly(gun.set.apply(this, arguments), timeMethods)
       },
       /* END UN-NEEDED METHODS */
 
-      set: function(data, cb) {
-        // TODO: We may not need this if we just allow all data to be .put, and don't create a TimeGraph if its outside of bounds.
-        // Because data has the possibility of being synced from other peers with a delay.
+      put: function(data, cb, as) {
+        if (data && data['#'])
+          return gun.put.apply(this, arguments) // Ref to another node, skip for timegraph, we will catch it later.
 
-        if (!data._)
-          console.log(arguments)
-        else
-          console.log('Found Gun obj')
+        var nodeData = (data && data._) || (data && as && as.data && as.data._) || (data && as && as.item && as.item.data)
+        var timegraphSoul = nodeData && nodeData.soul
 
-        console.log('Set called')
-
-        // TODO: FIXME: isData needs modified, need to check whether it's a node or not..
-        // thought we could handle this logic inside .put, but doesn't seem like it. Data is still propagated to gun._.graph
-        // return false // This works by blocking
-
-        // FIXME: Handle .set(node) also
-        // need a way to find Gun.node.is(node).data
-        // IMPORTANT: Because Set did not succeed, the new item is not returned for this..
-
-        var isData = (data && data._ && data._.put && !data._.put.timegraphSoul)
-        if (!isData)
-          return nodeProxyPoly(gun.set.apply(this, arguments), timeMethods)
-
-        if (!withinDate(Date.now(), startDate, stopDate)) {
-          console.log('here 1 set')
-          return this
-        }
-
-        return nodeProxyPoly(gun.set.apply(this, arguments), timeMethods)
-      },
-
-      put: function(data, cb) {
-        var isData = (data && data._ && data._.put && !data._.put.timegraphSoul)
-        if (!isData)
-          return nodeProxyPoly(gun.put.apply(this, arguments), timeMethods)
-
-        console.log('Put called')
-        if (!withinDate(Date.now(), startDate, stopDate)) {
-          console.log('here 1')
-          return this
-        }
-
-        console.log('here 2')
-
-        var timegraphSoul = data._.soul
         var proxyCall = gun.put.apply(this, arguments)
-
         var parent = proxyCall.back(1)
-        var timegraph = nodeProxyPoly(parent.get('timegraph'), timeMethods)
 
-        if (timegraphSoul) {
-          addTimegraph(timegraph, timegraphSoul)
-        } else {
-          // If we don't already have a soul, get it.
-          proxyCall.once(function(data, key) {
-            var timegraphSoul = Gun.node.soul(data)
-            addTimegraph(timegraph, timegraphSoul)
-          })
-        }
+        parent.once(function(data, key) {
+          var proxySoul = data && data._ && data._['#']
+
+          if (!proxySoul)
+            return console.log('Unknown error')
+
+          // TODO: Allow over-riding a date, for migration and custom data.
+          // This could be done via an over-ride type chain/function .dateFormatter(function)
+
+          var timepoint = root.get('timegraph/' + proxySoul).put({ [timegraphSoul]: Date.now() })
+          parent.get('timegraph').put(timepoint)
+          root.get('timegraphs').put({ ['timegraph/' + proxySoul]: key })
+        })
 
         return nodeProxyPoly(proxyCall, timeMethods)
       },
@@ -113,8 +85,11 @@
   }
 
   // Shim for backward compatibility
-  Gun.chain.time = function(data, a, b){
-  }
+  var origTimegraph = (typeof window !== 'undefined') ? window.Gun.chain.time : null
+  if (!origTimegraph)
+    Gun.chain.time = function(data, a, b){
+      console.warn('This shim is provided by the new TimeGraph API, we recommend switching to that as it offers more features and better stability.')
+    }
 
 
   function nodeProxyPoly(node, props) {
@@ -130,18 +105,6 @@
     // then in each of the proxiedFunctions, we just return timeMethods
 
     return newNode
-  }
-
-  function addTimegraph(node, timegraphSoul) {
-    if (timegraphSoul)
-      node.set({ timegraphSoul, date: Date.now() })
-
-    // TODO: unique nodeName for this set.
-    // For the set
-    // timegraph:timegraphUUID
-
-    // For the items in set
-    // timepoint:timegraphSoul
   }
 
   function withinDate(checkDate, startDate, stopDate) {
@@ -167,4 +130,4 @@
     return true
   }
 
-}());
+}())
