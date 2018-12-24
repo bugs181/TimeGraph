@@ -4,7 +4,7 @@
 TimeGraph library for the [Gun TimeGraph bounty](https://gun.eco/docs/Bounty#-5k-reward-for-timegraph)
 
 # Notes:
-* Adds special TimeGraph indexes to the root of Gun.
+* Adds special TimeGraph indexes to the root of data.
 * This addition goes a little further than the original TimeGraph library by providing methods to work with time-data, streamed to normal gun operations.
 * Shim provided for Backwards compatibility with existing API
 * May cause problems for multiple chained `.time()` API (needs testing)
