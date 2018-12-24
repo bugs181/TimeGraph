@@ -37,10 +37,6 @@
       /* END UN-NEEDED METHODS */
 
       put: function(data, cb, as) {
-        // TODO: FIXME: Will put it into the wrong node for nodes...
-        // app.get('list').timegraph().set(mark.boss) // Works
-        // app.get('list').timegraph().set(app.get('mark').get('boss')) // Does not work; Will hoist it to parent node.
-
         if (data && data['#'])
           return gun.put.apply(this, arguments) // Ref to another node, skip for timegraph, we will catch it later.
 
