@@ -13,6 +13,7 @@ This module goes a little further than the original TimeGraph library by providi
 * TimePlots allow you to discover and traverse TimeGraphs very quickly with highly interconnected data.
 * Subset of special API methods for filtering and working with TimeGraphs. Can be built upon further.
 * Can be used in conjunction with other Date/Time libraries like [moment.js](http://momentjs.com)
+* Custom Date formatters/serializers
 
 <br>
 
@@ -69,14 +70,58 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
 * `node.time().plot().filter(function).once()` : Discover plots with a filter function for data you're not interested in. (Good use of Schema here)
 
 # TimeGraph Structure:
-    'parentNode': {
-      'timegraph': [
-        dataNodeSoul,
-        dataNodeSoul
-      ],
+    'dataNode': {
+       timegraph: { '#': 'timegraph/dataNodeSoul' }
+    }
 
-      dataNode: {
-        props
+    'timegraph/dataNodeSoul': {
+      'propSoul': Date,
+      'propSoul': Date,
+    }
+
+    'timegraphs': {
+      'timegraph/dataNodeSoul': 'dataNodeKey'
+    }
+    
+# Example TimeGraph Structure:
+## Code:
+    const app = gun.get('app').time()
+    app.get('people').set({ name: 'Levi' })
+    app.get('people').set({ name: 'Mark' })    
+
+## Sturcture:
+    {
+      jq2dykdyNPvoebSHLnI7:{
+        _: { '#': 'jq2dykdyNPvoebSHLnI7', '>': { name: 1545659838647 } },
+        name: 'Levi'
+      },
+
+      jq2dyke5Kw3O9gWM94rF: {
+        _: { '#': 'jq2dyke5Kw3O9gWM94rF', '>': { name: 1545659838653.001 } },
+        name: 'Mark'
+      },
+
+      app: {
+        _: { '#': 'app', '>': { people: 1545659847659 } },
+        people: { '#': 'jq2dyrccFc77MBuLKb8c' }
+      },
+
+      jq2dyrccFc77MBuLKb8c: {
+        _: { '#': 'jq2dyrccFc77MBuLKb8c', '>': { jq2dykdyNPvoebSHLnI7: 1545659847658, jq2dyke5Kw3O9gWM94rF: 1545659847659, timegraph: 1545659847862 } },
+        jq2dykdyNPvoebSHLnI7: { '#': 'jq2dykdyNPvoebSHLnI7' },
+        jq2dyke5Kw3O9gWM94rF: { '#': 'jq2dyke5Kw3O9gWM94rF' },
+        timegraph: { '#': 'timegraph/jq2dyrccFc77MBuLKb8c' }
+      },
+
+      'timegraph/jq2dyrccFc77MBuLKb8c': {
+        _: { '#': 'timegraph/jq2dyrccFc77MBuLKb8c', '>': { jq2dykdyNPvoebSHLnI7: 1545659847760, jq2dyke5Kw3O9gWM94rF: 1545659847861 } },
+        jq2dykdyNPvoebSHLnI7: 1545659847760,
+        jq2dyke5Kw3O9gWM94rF: 1545659847861
+      },
+
+      timegraphs: {
+        _: { '#': 'timegraphs', '>': { 'timegraph/jq2dyrccFc77MBuLKb8c': 1545659847862.002 } },
+        'timegraph/jq2dyrccFc77MBuLKb8c': 'people'
       }
     }
 
