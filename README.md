@@ -21,7 +21,7 @@ TimeGraph library for the [Gun TimeGraph bounty](https://gun.eco/docs/Bounty#-5k
 
 # Prerequisits:
 
-    var node = gun.get('app')
+    var node = gun.get('list')
 
 <br>
 
@@ -87,9 +87,10 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
     
 # Example TimeGraph Structures:
 ## Code:
-    const app = gun.get('app').time()
-    app.get('people').set({ name: 'Levi' })
-    app.get('people').set({ name: 'Mark' })    
+    const app = gun.get('app')
+    const list = app.get('people').time()
+    list.set({ name: 'Levi' })
+    list.set({ name: 'Mark' })    
 
 ## Structure:
     {
@@ -175,29 +176,32 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
 # Examples:
 ## Insert data into TimeGraph
 
-    const app = gun.get('app').time()
-    app.get('people').set({ name: 'Levi' })
-    app.get('people').set({ name: 'Mark' })
+    const app = gun.get('app')
+    const list = app.get('people').time()
+    list.set({ name: 'Levi' })
+    list.set({ name: 'Mark' })
     
 ## Retrieve data from TimeGraph
 
-    const app = gun.get('app').time()
-    app.get('people').map().once(console.log)
+    const app = gun.get('app')
+    app.get('people').time().map().once(console.log)
 
 ## Insert valid data (inside of time bounds filter)
 
-    const app = gun.get('app').time(Date.now())
-    app.get('people').set({ name: 'Levi' })
-    app.get('people').set({ name: 'Mark' })
+    const app = gun.get('app')
+    const list = app.get('people').time(Date.now())
+    list.set({ name: 'Levi' })
+    list.set({ name: 'Mark' })
 
 ## Insert invalid data (outside of time bounds filter)
 
     var today = new Date()
     var yesterday = new Date(today.setDate(today.getDate() - 1))
     
-    const app = gun.get('app').time(null, yesterday)
-    app.get('people').set({ name: 'Levi' })
-    app.get('people').set({ name: 'Mark' })
+    const app = gun.get('app')
+    const list = app.get('people').time(null, yesterday)
+    list.set({ name: 'Levi' })
+    list.set({ name: 'Mark' })
 
 ## Backward compatibility shim
 
