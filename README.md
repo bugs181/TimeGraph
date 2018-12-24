@@ -8,6 +8,7 @@ TimeGraph library for the [Gun TimeGraph bounty](https://gun.eco/docs/Bounty#-5k
 * This addition goes a little further than the original TimeGraph library by providing methods to work with time-data, streamed to normal gun operations.
 * Shim provided for Backwards compatibility with existing API
 * May cause problems for multiple chained `.time()` API (needs testing)
+* Does not rely on the `state` property. Although currently is UTC + lexicon, is not a requirement and allows for other deterministic state libs.
 
 # Features:
 * TimeGraphs can be synced across peers. Can build a wire adapter to filter them out if you so desire.
