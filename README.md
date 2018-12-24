@@ -75,12 +75,14 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
 
 # TimeGraph Structure:
     'dataNode': {
-       timegraph: { '#': 'timegraph/dataNodeSoul' }
+       timegraph: { '#': 'timegraph/dataNodeSoul' },
+       prop1: 'value',
+       prop2: 'value',
     }
 
     'timegraph/dataNodeSoul': {
-      'propSoul': Date,
-      'propSoul': Date,
+      'prop1Soul': Date,
+      'prop2Soul': Date,
     }
 
     'timegraphs': {
