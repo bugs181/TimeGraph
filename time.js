@@ -37,20 +37,30 @@
       /* END UN-NEEDED METHODS */
 
       put: function(data, cb, as) {
+        // TODO: FIXME: Will put it into the wrong node for nodes...
+        // app.get('list').timegraph().set(mark.boss) // Works
+        // app.get('list').timegraph().set(app.get('mark').get('boss')) // Does not work; Will hoist it to parent node.
+
         if (data && data['#'])
           return gun.put.apply(this, arguments) // Ref to another node, skip for timegraph, we will catch it later.
 
-        var nodeData = (data && data._) || (data && as && as.data && as.data._) || (data && as && as.item && as.item.data)
-        var timegraphSoul = nodeData && nodeData.soul || (this._ && this._.get)
+        //var nodeData = (data && data._) || (data && as && as.data && as.data._) || (data && as && as.item && as.item.data)
+        var nodeData = data && (data._ || (as && as.data && as.data._) || (as && as.item && (as.item.data || as.item._)))
+        var timegraphSoul = nodeData && nodeData.soul || nodeData.dub //|| (this._ && this._.get)
 
         var proxyCall = gun.put.apply(this, arguments)
         var parent = proxyCall.back(1)
 
+        // Is a node, so fix parent
+        if (nodeData.dub)
+          parent = proxyCall
+
         parent.once(function(data, key) {
           var proxySoul = data && data._ && data._['#']
 
+          // Nested data
           if (!proxySoul)
-            return console.log('Unknown error')
+            return // FIXME: Should never be here?
 
           // TODO: Allow over-riding a date, for migration and custom data.
           // This could be done via an over-ride type chain/function .dateFormatter(function)
@@ -63,15 +73,17 @@
         return nodeProxyPoly(proxyCall, timeMethods)
       },
 
-      once: function(cb, opts) {
+      onceOld: function(cb, opts) {
         // Filter out timegraph objects
-        var proxyCall = gun.once.call(this, opts, function(data, key) {
+        /*var proxyCall = gun.once.call(this, opts, function(data, key) {
           if (key === 'timegraph')
             return
 
           // TODO: Filter startTime/stopTime
           cb && cb(data, key)
-        })
+        })*/
+
+        return gun.once.apply(this, timeMethods)
 
         return nodeProxyPoly(proxyCall, timeMethods)
       },
@@ -83,14 +95,6 @@
 
     return nodeProxyPoly(gun, timeMethods)
   }
-
-  // Shim for backward compatibility
-  var origTimegraph = (typeof window !== 'undefined') ? window.Gun.chain.time : null
-  if (!origTimegraph)
-    Gun.chain.time = function(data, a, b){
-      console.warn('This shim is provided by the new TimeGraph API, we recommend switching to that as it offers more features and better stability.')
-    }
-
 
   function nodeProxyPoly(node, props) {
     var nodeProps = {}
@@ -128,6 +132,17 @@
     }
 
     return true
+  }
+
+  // Shim for backward compatibility
+  var origTimegraph = (typeof window !== 'undefined') ? window.Gun.chain.time : null
+  if (origTimegraph)
+    return console.warn('Warning: Original .time() API detected! Please remove it from your project to use the new API.')
+
+  Gun.chain.time = function(data, a, b) {
+    if (b)
+      console.warn('Warning: Detected that you are still using the old TimeGraph API, we recommend switching to the new API syntax for more features and better stability.')
+
   }
 
 }())
