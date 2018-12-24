@@ -83,13 +83,13 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
       'timegraph/dataNodeSoul': 'dataNodeKey'
     }
     
-# Example TimeGraph Structure:
+# Example TimeGraph Structures:
 ## Code:
     const app = gun.get('app').time()
     app.get('people').set({ name: 'Levi' })
     app.get('people').set({ name: 'Mark' })    
 
-## Sturcture:
+## Structure:
     {
       jq2dykdyNPvoebSHLnI7:{
         _: { '#': 'jq2dykdyNPvoebSHLnI7', '>': { name: 1545659838647 } },
@@ -123,6 +123,30 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
         _: { '#': 'timegraphs', '>': { 'timegraph/jq2dyrccFc77MBuLKb8c': 1545659847862.002 } },
         'timegraph/jq2dyrccFc77MBuLKb8c': 'people'
       }
+    }
+
+## Code:
+    // Primitives work too, although not sure how meaningful the data would be?
+    const app = gun.get('app').time()
+    app.get('personId').put(Math.floor(Math.random() * 11))  
+
+## Structure:
+    { 
+      app: { 
+        _: { '#': 'app', '>': { personId: 1545661692548, timegraph: 1545661692659.001 } },
+        personId: 6,
+        timegraph: { '#': 'timegraph/app' } 
+      },
+      
+      'timegraph/app': { 
+        _: { '#': 'timegraph/app', '>': { personId: 1545661692658 } },
+        personId: 1545661692658 
+      },
+      
+      timegraphs: { 
+        _: { '#': 'timegraphs', '>': { 'timegraph/app': 1545661692660 } },
+        'timegraph/app': 'app' 
+      } 
     }
 
 # TimePlot Structure:
