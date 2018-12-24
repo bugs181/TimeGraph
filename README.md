@@ -65,14 +65,6 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 
 <br>
 
-# Plotting:
-Plotting is primarily useful for highly interconnected data. TimePlots are hoisted to the root level for all nested data and provide filtering methods. What seperates this from normal TimeGraphs is how the data is structured for very fast lookups in large sets of data.
-
-## API:
-* `node.time().plot()` : Adds a plot point for next `.put()` or `.set()`
-* `node.time(startDate, stopStop).plot().once()` : Discover all points that fall between the dates
-* `node.time().plot().filter(function).once()` : Discover plots with a filter function for data you're not interested in. (Good use of Schema here)
-
 # TimeGraph Structure:
     'dataNode': {
        timegraph: { '#': 'timegraph/dataNodeSoul' },
@@ -156,26 +148,7 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
       } 
     }
 
-# TimePlot Structure:
-
-    'timeplot': {
-      '2018': { // year
-        '12': { // month
-          '22': { // Day
-            '10': { // Hour
-              53: { // Min
-                dataNodeSoul,
-                dataNodeSoul,
-              },
-              54: { // Min
-                dataNodeSoul,
-                dataNodeSoul,
-              }
-            }
-          }
-        }
-      }
-    }
+<br>
 
 # Examples:
 ## Insert data into TimeGraph
@@ -216,5 +189,36 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
       // Retrieve new item
       app.get('people').get(graphItem.soul).once(console.log)
     })
+
+<br>
+
+# Plotting:
+Plotting is primarily useful for highly interconnected data. TimePlots are hoisted to the root level for all nested data and provide filtering methods. What seperates this from normal TimeGraphs is how the data is structured for very fast lookups in large sets of data.
+
+## API:
+* `node.time().plot()` : Adds a plot point for next `.put()` or `.set()`
+* `node.time(startDate, stopStop).plot().once()` : Discover all points that fall between the dates
+* `node.time().plot().filter(function).once()` : Discover plots with a filter function for data you're not interested in. (Good use of Schema here)
+
+# TimePlot Structure:
+
+    'timeplot': {
+      '2018': { // year
+        '12': { // month
+          '22': { // Day
+            '10': { // Hour
+              53: { // Min
+                dataNodeSoul,
+                dataNodeSoul,
+              },
+              54: { // Min
+                dataNodeSoul,
+                dataNodeSoul,
+              }
+            }
+          }
+        }
+      }
+    }
 
 ## More examples coming soon
