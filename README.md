@@ -1,25 +1,29 @@
-# Work in Progress
+# !!! Work in Progress !!!
 
 # TimeGraph
 TimeGraph library for the [Gun TimeGraph bounty](https://gun.eco/docs/Bounty#-5k-reward-for-timegraph)
 
-# Info:
-This module goes a little further than the original TimeGraph library by providing methods to work with time-data, streamed to normal gun operations.
+# Notes:
+* Adds special TimeGraph indexes to the root of data.
+* This addition goes a little further than the original TimeGraph library by providing methods to work with time-data, streamed to normal gun operations.
+* Shim provided for Backwards compatibility with existing API
+* May cause problems for multiple chained `.time()` API (needs testing)
+* Does not rely on the `state` property. Although currently is UTC + lexicon, is not a requirement and allows for other deterministic state libs.
 
 # Features:
 * TimeGraphs can be synced across peers. Can build a wire adapter to filter them out if you so desire.
 * No special methods needed, works with all Gun methods (what users are used to)
-* Leaves nested user data unmodified, building upon a single timegraph property in that node.
+* Leaves user data unmodified, building upon a single timegraph property in that node.
 * TimePlots allow you to discover and traverse TimeGraphs very quickly with highly interconnected data.
 * Subset of special API methods for filtering and working with TimeGraphs. Can be built upon further.
 * Can be used in conjunction with other Date/Time libraries like [moment.js](http://momentjs.com)
-* Custom Date formatters/serializers
+* Custom Date formatters/serializers (WIP) `dateFormatter` & `dateCompare`
 
 <br>
 
 # Prerequisits:
 
-    var node = gun.get('app')
+    var node = gun.get('list')
 
 <br>
 
@@ -71,12 +75,14 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
 
 # TimeGraph Structure:
     'dataNode': {
-       timegraph: { '#': 'timegraph/dataNodeSoul' }
+       timegraph: { '#': 'timegraph/dataNodeSoul' },
+       prop1: 'value',
+       prop2: 'value',
     }
 
     'timegraph/dataNodeSoul': {
-      'propSoul': Date,
-      'propSoul': Date,
+      'prop1Soul': Date,
+      'prop2Soul': Date,
     }
 
     'timegraphs': {
@@ -85,9 +91,10 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
     
 # Example TimeGraph Structures:
 ## Code:
-    const app = gun.get('app').time()
-    app.get('people').set({ name: 'Levi' })
-    app.get('people').set({ name: 'Mark' })    
+    const app = gun.get('app')
+    const list = app.get('people').time()
+    list.set({ name: 'Levi' })
+    list.set({ name: 'Mark' })    
 
 ## Structure:
     {
@@ -173,29 +180,32 @@ Plotting is primarily useful for highly interconnected data. TimePlots are hoist
 # Examples:
 ## Insert data into TimeGraph
 
-    const app = gun.get('app').time()
-    app.get('people').set({ name: 'Levi' })
-    app.get('people').set({ name: 'Mark' })
+    const app = gun.get('app')
+    const list = app.get('people').time()
+    list.set({ name: 'Levi' })
+    list.set({ name: 'Mark' })
     
 ## Retrieve data from TimeGraph
 
-    const app = gun.get('app').time()
-    app.get('people').map().once(console.log)
+    const app = gun.get('app')
+    app.get('people').time().map().once(console.log)
 
 ## Insert valid data (inside of time bounds filter)
 
-    const app = gun.get('app').time(Date.now())
-    app.get('people').set({ name: 'Levi' })
-    app.get('people').set({ name: 'Mark' })
+    const app = gun.get('app')
+    const list = app.get('people').time(Date.now())
+    list.set({ name: 'Levi' })
+    list.set({ name: 'Mark' })
 
 ## Insert invalid data (outside of time bounds filter)
 
     var today = new Date()
     var yesterday = new Date(today.setDate(today.getDate() - 1))
     
-    const app = gun.get('app').time(null, yesterday)
-    app.get('people').set({ name: 'Levi' })
-    app.get('people').set({ name: 'Mark' })
+    const app = gun.get('app')
+    const list = app.get('people').time(null, yesterday)
+    list.set({ name: 'Levi' })
+    list.set({ name: 'Mark' })
 
 ## Backward compatibility shim
 
