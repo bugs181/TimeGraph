@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+/* eslint-disable prefer-template */
 ;(function() {
   var Gun = (typeof window !== 'undefined') ? window.Gun : require('gun/gun')
 
@@ -40,17 +42,37 @@
         var proxyCall = gun.put.apply(this, arguments)
 
         proxyCall.get(function(data) {
-          var proxySoul = data.put._['#']
-
           // Prevent recursion from timegraph .put
           if (data.put.timegraph)
             return
 
+          var proxySoul = data.put._['#']
+
           var parentSoul = data.via && data.via.soul || data.$._.dub
           var parent = gun.get(proxySoul).back(1)
 
-          var timepoint = root.get('timegraph/' + parentSoul).put({ [proxySoul]: Date.now() })
-          parent.get('timegraph').put(timepoint)
+          var timegraph = root.get('timegraph/' + parentSoul)
+
+          // Handle node refs
+          //  Perf Note: Wish there was a better way to get the first prop of object without loop.
+          //    This does lead us to future compatibility in case Gun ever decides to group node refs during a .put
+          var hasNodeRefs = false
+          for (var prop of Object.keys(data.put)) {
+            if (prop === '_')
+              continue
+
+            // If node ref
+            if (data.put[prop]['#']) {
+              timegraph.put({ [prop]: Date.now() })
+              hasNodeRefs = true
+            }
+          }
+
+          if (!hasNodeRefs)
+            timegraph.put({ [proxySoul]: Date.now() })
+
+          root.get(parentSoul).get('timegraph').put(timegraph)
+          // FIXME: parent._.get should be proxySoul.key
           root.get('timegraphs').put({ ['timegraph/' + parentSoul]: parent._.get })
         })
 
