@@ -49,8 +49,6 @@
           var proxySoul = data.put._['#']
 
           var parentSoul = data.via && data.via.soul || data.$._.dub
-          var parent = gun.get(proxySoul).back(1)
-
           var timegraph = root.get('timegraph/' + parentSoul)
 
           // Handle node refs
@@ -68,12 +66,14 @@
             }
           }
 
-          if (!hasNodeRefs)
+          var parentKey = data.get
+          if (!hasNodeRefs) {
             timegraph.put({ [proxySoul]: Date.now() })
+            parentKey = data.via.get
+          }
 
           root.get(parentSoul).get('timegraph').put(timegraph)
-          // FIXME: parent._.get should be proxySoul.key
-          root.get('timegraphs').put({ ['timegraph/' + parentSoul]: parent._.get })
+          root.get('timegraphs').put({ ['timegraph/' + parentSoul]: parentKey })
         })
 
         return nodeProxyPoly(proxyCall, timeMethods)
