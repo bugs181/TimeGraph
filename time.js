@@ -1,6 +1,5 @@
 ;(function() {
   var Gun = (typeof window !== 'undefined') ? window.Gun : require('gun/gun')
-  var ify = Gun.node.ify
 
   if (!Gun)
     throw new Error('TimeGraph is meant to be used with Gun')
@@ -12,12 +11,13 @@
     var opts = gun && gun._ && gun._.root && gun._.root.opt
     var enforceData = opts.enforceData
 
-    var startDate, stopDate
+    /*var startDate, stopDate
     if (startDateOpt && (startDateOpt instanceof Date || typeof startDateOpt === 'number' || typeof startDateOpt === 'string'))
       startDate = new Date(startDateOpt).getTime()
 
     if (stopDateOpt && (stopDateOpt instanceof Date || typeof stopDateOpt === 'number' || typeof stopDateOpt === 'string'))
       stopDate = new Date(stopDateOpt).getTime()
+    */
 
     var timeMethods = {
 
@@ -36,34 +36,22 @@
       },
       /* END UN-NEEDED METHODS */
 
-      put: function(data, cb, as) {
-        if (data && data['#'])
-          return gun.put.apply(this, arguments) // Ref to another node, skip for timegraph, we will catch it later.
-
-        //var nodeData = (data && data._) || (data && as && as.data && as.data._) || (data && as && as.item && as.item.data)
-        var nodeData = data && (data._ || (as && as.data && as.data._) || (as && as.item && (as.item.data || as.item._)))
-        var timegraphSoul = nodeData && nodeData.soul || nodeData.dub //|| (this._ && this._.get)
-
+      put: function() {
         var proxyCall = gun.put.apply(this, arguments)
-        var parent = proxyCall.back(1)
 
-        // Is a node, so fix parent
-        if (nodeData.dub)
-          parent = proxyCall
+        proxyCall.get(function(data) {
+          var proxySoul = data.put._['#']
 
-        parent.once(function(data, key) {
-          var proxySoul = data && data._ && data._['#']
+          // Prevent recursion from timegraph .put
+          if (data.put.timegraph)
+            return
 
-          // Nested data
-          if (!proxySoul)
-            return // FIXME: Should never be here?
+          var parentSoul = data.via && data.via.soul || data.$._.dub
+          var parent = gun.get(proxySoul).back(1)
 
-          // TODO: Allow over-riding a date, for migration and custom data.
-          // This could be done via an over-ride type chain/function .dateFormatter(function)
-
-          var timepoint = root.get('timegraph/' + proxySoul).put({ [timegraphSoul]: Date.now() })
+          var timepoint = root.get('timegraph/' + parentSoul).put({ [proxySoul]: Date.now() })
           parent.get('timegraph').put(timepoint)
-          root.get('timegraphs').put({ ['timegraph/' + proxySoul]: key })
+          root.get('timegraphs').put({ ['timegraph/' + parentSoul]: parent._.get })
         })
 
         return nodeProxyPoly(proxyCall, timeMethods)
@@ -80,12 +68,10 @@
         })*/
 
         return gun.once.apply(this, timeMethods)
-
-        return nodeProxyPoly(proxyCall, timeMethods)
+        //return nodeProxyPoly(proxyCall, timeMethods)
       },
 
       on: function(cb) {
-
       },
     }
 
@@ -139,6 +125,7 @@
     if (b)
       console.warn('Warning: Detected that you are still using the old TimeGraph API, we recommend switching to the new API syntax for more features and better stability.')
 
+    return Gun.chain.timegraph.apply(this, data, a)
   }
 
 }())
