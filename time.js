@@ -38,45 +38,86 @@
       },
       /* END UN-NEEDED METHODS */
 
-      put: function() {
-        var proxyCall = gun.put.apply(this, arguments)
+      time: function(data, cb) {
+        // Create new data/soul every .put to match original API
+        var soul = (gun.back('opt.uuid') || Gun.text.random)(9)
+        data._ = { '#': soul }
+        return timeMethods.put.call(this, data, cb)
+      },
 
-        proxyCall.get(function(data) {
-          // Prevent recursion from timegraph .put
-          if (data.put.timegraph)
-            return
+      put: function(data, cb, as, rData, rSoul, cbb) {
+        var gunCtx = this
 
-          var proxySoul = data.put._['#']
+        if (Gun.is(data)) {
+          data.get(function(soul) {
+            if (!soul)
+              return cb && cb({ err: "Timegraph cannot link `undefined`!" })
 
-          var parentSoul = data.via && data.via.soul || data.$._.dub
-          var timegraph = root.get('timegraph/' + parentSoul)
+            timeMethods.put.call(gunCtx, null, cb, as, data, soul)
+          }, true)
+          return this
+        }
 
-          // Handle node refs
-          //  Perf Note: Wish there was a better way to get the first prop of object without loop.
-          //    This does lead us to future compatibility in case Gun ever decides to group node refs during a .put
-          var hasNodeRefs = false
-          for (var prop of Object.keys(data.put)) {
-            if (prop === '_')
-              continue
+        gun.get(function(soul) {
+          if (rSoul)
+            soul = rSoul
 
-            // If node ref
-            if (data.put[prop]['#']) {
-              timegraph.put({ [prop]: Date.now() })
-              hasNodeRefs = true
+          if (soul) {
+            //var ify = Gun.node.ify
+            function ify(obj, str) {
+              return { _: { '#': str } }
             }
+
+            var t = new Date(Gun.state()).toISOString().split(/[\-t\:\.z]/ig)
+            var rid = 'timepoint/' + soul
+            t = [rid].concat(t)
+
+            // Working example of original modified slightly
+            var milli = ify({}, t.join(':'))
+            milli['soul'] = soul
+
+            var tmp = t.pop()
+            tmp = t.pop()
+
+            var sec = ify({}, t.join(':'))
+            sec[tmp] = milli
+            tmp = t.pop()
+
+            var min = ify({}, t.join(':'));
+            min[tmp] = sec;
+            tmp = t.pop();
+
+            var hour = ify({}, t.join(':'));
+            hour[tmp] = min;
+            tmp = t.pop();
+
+            var day = ify({}, t.join(':'));
+            day[tmp] = hour;
+            tmp = t.pop();
+
+            var month = ify({}, t.join(':'));
+            month[tmp] = day;
+            tmp = t.pop();
+
+            var year = ify({}, t.join(':'));
+            year[tmp] = month;
+            tmp = t.pop();
+
+            var time = ify({}, t.join(':') || 'id');
+            time[tmp] = year;
+
+            var timepoint = time
+            gun.put({ last: Gun.state(), timepoint, soul }, 'timegraph/' + soul)
           }
 
-          var parentKey = data.get
-          if (!hasNodeRefs) {
-            timegraph.put({ [proxySoul]: Date.now() })
-            parentKey = data.via.get
-          }
+          if (rData)
+            gun.put.call(gunCtx, rData, cb, as)
+          else
+            gun.put.call(gunCtx, data, cb, as)
 
-          root.get(parentSoul).get('timegraph').put(timegraph)
-          root.get('timegraphs').put({ ['timegraph/' + parentSoul]: parentKey })
-        })
+        }, true)
 
-        return nodeProxyPoly(proxyCall, timeMethods)
+        return this
       },
 
       onceOld: function(cb, opts) {
@@ -108,9 +149,6 @@
 
     var newNode = Object.create(node, nodeProps)
     newNode = Object.assign(newNode, node)
-
-    // for each newNode.get,put, nodeProxyPoly() that too.
-    // then in each of the proxiedFunctions, we just return timeMethods
 
     return newNode
   }
