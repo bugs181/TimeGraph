@@ -13,13 +13,13 @@
     var opts = gun && gun._ && gun._.root && gun._.root.opt
     var enforceData = opts.enforceData
 
-    /*var startDate, stopDate
+    var startDate, stopDate
     if (startDateOpt && (startDateOpt instanceof Date || typeof startDateOpt === 'number' || typeof startDateOpt === 'string'))
       startDate = new Date(startDateOpt).getTime()
 
     if (stopDateOpt && (stopDateOpt instanceof Date || typeof stopDateOpt === 'number' || typeof stopDateOpt === 'string'))
       stopDate = new Date(stopDateOpt).getTime()
-    */
+
 
     var timeMethods = {
 
@@ -39,13 +39,20 @@
       /* END UN-NEEDED METHODS */
 
       time: function(data, cb) {
-        // Create new data/soul every .put to match original API
+        if (data instanceof Function) {
+          cb = data
+          return timeMethods.on.call(this, function(data, key, _, _2, time) {
+            cb && cb(data, key, time)
+          })
+        }
+
+        // Create new data/soul for every .put to match original API
         var soul = (gun.back('opt.uuid') || Gun.text.random)(9)
         data._ = { '#': soul }
-        return timeMethods.put.call(this, data, cb)
+        return timeMethods.put.call(this, data, cb, null, null, soul)
       },
 
-      put: function(data, cb, as, rData, rSoul, cbb) {
+      put: function(data, cb, as, rData, rSoul) {
         var gunCtx = this
 
         if (Gun.is(data)) {
@@ -108,6 +115,7 @@
 
             var timepoint = time
             gun.put({ last: Gun.state(), timepoint, soul }, 'timegraph/' + soul)
+            //timeMethods.pending.push(soul)
           }
 
           if (rData)
@@ -135,6 +143,16 @@
       },
 
       on: function(cb) {
+        var gunCtx = this
+
+        gun.on(function(data) {
+          var args = arguments
+          const nodeRef = data._['#']
+          root.get('timegraph/' + nodeRef).once(data => {
+            if (withinDate(data.last, startDate, stopDate))
+              cb && cb.apply(gunCtx, Array.prototype.slice.call(args).concat([data.last]))
+          })
+        })
       },
     }
 
@@ -177,7 +195,7 @@
   }
 
   // Shim for backward compatibility
-  var origTimegraph = (typeof window !== 'undefined') ? window.Gun.chain.time : null
+  var origTimegraph = (typeof Gun.chain.time !== 'undefined') ? Gun.chain.time : null
   if (origTimegraph)
     return console.warn('Warning: Original .time() API detected! Please remove it from your project to use the new API.')
 
@@ -185,7 +203,7 @@
     if (b)
       console.warn('Warning: Detected that you are still using the old TimeGraph API, we recommend switching to the new API syntax for more features and better stability.')
 
-    return Gun.chain.timegraph.apply(this, data, a)
+    return Gun.chain.timegraph.time.apply(this, data, a)
   }
 
 }())
