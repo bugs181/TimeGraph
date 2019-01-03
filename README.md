@@ -8,13 +8,12 @@ TimeGraph library for the [Gun TimeGraph bounty](https://gun.eco/docs/Bounty#-5k
 * This addition goes a little further than the original TimeGraph library by providing methods to work with time-data, streamed to normal gun operations.
 * Shim provided for Backwards compatibility with existing API
 * May cause problems for multiple chained `.time()` API (needs testing)
-* Does not rely on the `state` property. Although currently is UTC + lexicon, is not a requirement and allows for other deterministic state libs.
 
 # Features:
 * TimeGraphs can be synced across peers. Can build a wire adapter to filter them out if you so desire.
 * No special methods needed, works with all Gun methods (what users are used to)
-* Leaves user data unmodified, building upon a single timegraph property in that node.
-* TimePlots allow you to discover and traverse TimeGraphs very quickly with highly interconnected data.
+* Leaves user data unmodified, building upon a single timegraph property for that node.
+* Discover and traverse TimeGraphs very quickly with highly interconnected data due to decoupling.
 * Subset of special API methods for filtering and working with TimeGraphs. Can be built upon further.
 * Can be used in conjunction with other Date/Time libraries like [moment.js](http://momentjs.com)
 * Custom Date formatters/serializers (WIP) `dateFormatter` & `dateCompare`
@@ -67,19 +66,27 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 
 # TimeGraph Structure:
     'dataNode': {
-       timegraph: { '#': 'timegraph/dataNodeSoul' },
+       _: { '#': 'dataNodeSoul },
        prop1: 'value',
        prop2: 'value',
     }
 
     'timegraph/dataNodeSoul': {
-      'prop1Soul': Date,
-      'prop2Soul': Date,
+        first: state + lex,
+        last: state + lex,
+        soul: 'dataNodeSoul',
+        timepoint: { '#': 'timepoint/dataNodeSoul' },
     }
 
-    'timegraphs': {
-      'timegraph/dataNodeSoul': 'dataNodeKey'
+    'timepoint/dataNodeSoul': {
+        '2019': { '#': 'timepoint/dataNodeSoul:2019' },
     }
+
+    'timepoint/dataNodeSoul:2019': {
+        '01': { '#': 'timepoint/dataNodeSoul:2019:01' }
+    }
+    
+    ...timepoint/etc
     
 # Example TimeGraph Structures:
 ## Code:
@@ -89,39 +96,42 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
     list.set({ name: 'Mark' })    
 
 ## Structure:
-    {
-      jq2dykdyNPvoebSHLnI7:{
-        _: { '#': 'jq2dykdyNPvoebSHLnI7', '>': { name: 1545659838647 } },
-        name: 'Levi'
+    { 
+      jqg3tkqfEal1JtLWkn8V: { 
+        _: { '#': 'jqg3tkqfEal1JtLWkn8V', ... },
+        name: 'Mark',
       },
 
-      jq2dyke5Kw3O9gWM94rF: {
-        _: { '#': 'jq2dyke5Kw3O9gWM94rF', '>': { name: 1545659838653.001 } },
-        name: 'Mark'
+      jqg3tkqrA9XCHBE1Vd7s: { 
+        _: { '#': 'jqg3tkqrA9XCHBE1Vd7s', ... },
+        name: 'Levi',
+      },
+        
+      jqg3tkqn3HtZtCCrOucM: { 
+        _: { '#': 'jqg3tkqn3HtZtCCrOucM', ... },
+        jqg3tkqfEal1JtLWkn8V: { '#': 'jqg3tkqfEal1JtLWkn8V' },
+        jqg3tkqrA9XCHBE1Vd7s: { '#': 'jqg3tkqrA9XCHBE1Vd7s' },
       },
 
-      app: {
-        _: { '#': 'app', '>': { people: 1545659847659 } },
-        people: { '#': 'jq2dyrccFc77MBuLKb8c' }
+      'timegraph/jqg3tkqn3HtZtCCrOucM': { 
+        _: { '#': 'timegraph/jqg3tkqn3HtZtCCrOucM', ... },
+        first: 1546489336128.001,
+        last: 1546489336132.003,
+        soul: 'jqg3tkqn3HtZtCCrOucM',
+        timepoint: { '#': 'timepoint/jqg3tkqn3HtZtCCrOucM:2019' },
       },
 
-      jq2dyrccFc77MBuLKb8c: {
-        _: { '#': 'jq2dyrccFc77MBuLKb8c', '>': { jq2dykdyNPvoebSHLnI7: 1545659847658, jq2dyke5Kw3O9gWM94rF: 1545659847659, timegraph: 1545659847862 } },
-        jq2dykdyNPvoebSHLnI7: { '#': 'jq2dykdyNPvoebSHLnI7' },
-        jq2dyke5Kw3O9gWM94rF: { '#': 'jq2dyke5Kw3O9gWM94rF' },
-        timegraph: { '#': 'timegraph/jq2dyrccFc77MBuLKb8c' }
+      ...timepoint/jqg3tkqn3HtZtCCrOucM:2019:...,
+        
+      'timepoint/jqg3tkqn3HtZtCCrOucM:2019:01:03:04:22:16:128': {
+        _: { '#': 'timepoint/jqg3tkqn3HtZtCCrOucM:2019:01:03:04:22:16:128', ... },
+        soul: 'jqg3tkqfEal1JtLWkn8V',
       },
 
-      'timegraph/jq2dyrccFc77MBuLKb8c': {
-        _: { '#': 'timegraph/jq2dyrccFc77MBuLKb8c', '>': { jq2dykdyNPvoebSHLnI7: 1545659847760, jq2dyke5Kw3O9gWM94rF: 1545659847861 } },
-        jq2dykdyNPvoebSHLnI7: 1545659847760,
-        jq2dyke5Kw3O9gWM94rF: 1545659847861
+      'timepoint/jqg3tkqn3HtZtCCrOucM:2019:01:03:04:22:16:132:': { 
+        _: { '#': 'timepoint/jqg3tkqn3HtZtCCrOucM:2019:01:03:04:22:16:132:', ... },
+        soul: 'jqg3tkqrA9XCHBE1Vd7s', 
       },
-
-      timegraphs: {
-        _: { '#': 'timegraphs', '>': { 'timegraph/jq2dyrccFc77MBuLKb8c': 1545659847862.002 } },
-        'timegraph/jq2dyrccFc77MBuLKb8c': 'people'
-      }
     }
 
 ## Code:
@@ -192,17 +202,9 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 
 <br>
 
-# Plotting:
-Plotting is primarily useful for highly interconnected data. TimePlots are hoisted to the root level for all nested data and provide filtering methods. What seperates this from normal TimeGraphs is how the data is structured for very fast lookups in large sets of data.
+# TimePoint Structure:
 
-## API:
-* `node.time().plot()` : Adds a plot point for next `.put()` or `.set()`
-* `node.time(startDate, stopStop).plot().once()` : Discover all points that fall between the dates
-* `node.time().plot().filter(function).once()` : Discover plots with a filter function for data you're not interested in. (Good use of Schema here)
-
-# TimePlot Structure:
-
-    'timeplot': {
+    'timepoint/soul': {
       '2018': { // year
         '12': { // month
           '22': { // Day
