@@ -42,28 +42,12 @@
       time: function(data, cb) {
         if (data instanceof Function) {
           cb = data
-          return timeMethods.on.call(this, function(data, key, _, _2, time) {
+          return timeMethods.on.call(this, function(data, key, time) {
             cb && cb(data, key, time)
           })
         }
 
-        // Create new data/soul for every .put to match original API
-
-        // Closest working, but loses context
-        var soul = (gun.back('opt.uuid') || Gun.text.random)(9)
-        //return timeMethods.put.call(this, ify(data, soul), soul, null, soul)
-
-        //this._.dub = soul
-        //return timeMethods.put.call(this, ify(data, gun._.dub), null, null, soul)
-
-        //this._.dub = soul
-        //var as = this
-        //as._.dub = soul
-        //return timeMethods.put.call(this, ify(data, soul), cb, as)
-
-        //timeMethods.put.call(this, data, cb, this, null, soul)
-        timeMethods.put.call(this, ify(data, soul), cb, this, null, soul)
-        return this
+        return timeMethods.set.call(this, data, cb)
       },
 
       put: function(data, cb, as, rSoul) {
@@ -76,23 +60,19 @@
 
             timeMethods.put.call(gunCtx, Gun.val.link.ify(soul), cb, as, soul)
           }, true)
-          return this
+          return gunCtx
         }
 
         gun.get(function(soul) {
-          // This fixes .set(), because passing soul to gun.put() creates weird behavior.
-          if (!soul) {
-            if (!gun._.dub) {
-              gun._.dub = (gun.back('opt.uuid') || Gun.text.random)(9)
-              soul = gun._.dub
-            }
-          }
-
-          if (!rSoul)
-            rSoul = soul
+          // This fixes .set(), because .set does not have a soul yet. Passing soul to gun.put() creates weird behavior, so not a solution.
+          if (!soul)
+            return timeMethods.put.call(gunCtx, gun.put.call(gunCtx, data, null, as), cb)
 
           gun.put.call(gunCtx, data, cb, as)
 
+          // Last ditch effort to find soul for TimeGraph
+          if (!rSoul)
+            rSoul = (as && as.item && as.item._ && as.item._.soul) || soul
 
           var t = new Date(Gun.state()).toISOString().split(/[\-t\:\.z]/ig)
           var rid = 'timepoint/' + soul
@@ -132,9 +112,11 @@
           var time = ify({}, t.join(':') || 'id')
           time[tmp] = year
 
-          var timepoint = milli //time
-          gun.put.call(gunCtx, { last: Gun.state(), timepoint, soul }, 'timegraph/' + soul)
+          var timepoint = time //milli //time
+          root.put.call(root, { last: milli, state: Gun.state(), timepoint, soul }, 'timegraph/' + soul)
         }, true)
+
+        return gunCtx
       },
 
       once: function(cb) {
@@ -154,16 +136,35 @@
       },
 
       on: function(cb) {
+        // TODO: .on/.once can take multiple paths like .first, .last, .range
         var gunCtx = this
 
-        gun.on.call(gunCtx, function(data) {
-          var args = arguments
-          const nodeRef = data._['#']
-          root.get('timegraph/' + nodeRef).once(data => {
-            if (withinDate(data.last, startDate, stopDate))
-              cb && cb.apply(gunCtx, Array.prototype.slice.call(args).concat([data.last]))
+        gun.get(function(soul) {
+          if (!soul)
+            return cb.call(gun, { err: Gun.log('TimeGraph ran into .on error, please report this!') })
+
+          root.get('timegraph/' + soul).on(function(timegraph) {
+            var lastTimepoint = timegraph.last['#']
+
+            root.get(lastTimepoint).once(timepoint => {
+              root.get(timepoint.soul).once(function(data, key) {
+                if (withinDate(timegraph.state, startDate, stopDate))
+                  cb && cb(data, key, timegraph.state)
+              })
+            })
           })
-        })
+        }, true)
+
+        return gunCtx
+      },
+
+      off: function() {
+        gun.get(function(soul) {
+          if (!soul)
+            return Gun.log('TimeGraph ran into .on error, please report this!')
+
+          root.get('timegraph/' + soul).off()
+        }, true)
       },
     }
 
