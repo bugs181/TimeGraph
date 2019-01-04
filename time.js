@@ -42,9 +42,7 @@
       time: function(data, cb) {
         if (data instanceof Function) {
           cb = data
-          return timeMethods.on.call(this, function(data, key, time) {
-            cb && cb(data, key, time)
-          })
+          return chainEvent.call(this, 'on', cb, true)
         }
 
         return timeMethods.set.call(this, data, cb)
@@ -112,7 +110,7 @@
           var time = ify({}, t.join(':') || 'id')
           time[tmp] = year
 
-          var timepoint = time //milli //time
+          var timepoint = milli //milli //time
           root.put.call(root, { last: milli, state: Gun.state(), timepoint, soul }, 'timegraph/' + soul)
         }, true)
 
@@ -120,149 +118,82 @@
       },
 
       once: function(cb) {
-        var gunCtx = this
-
-        gun.once.call(gunCtx, function(data) {
-          if (!data)
-            cb && cb.apply(gunCtx, undefined)
-
-          var args = arguments
-          const nodeRef = data._['#']
-          root.get('timegraph/' + nodeRef).once(data => {
-            if (withinDate(data.last, startDate, stopDate))
-              cb && cb.apply(gunCtx, Array.prototype.slice.call(args).concat([data.last]))
-          })
-        })
+        return chainEvent.call(this, 'once', cb)
       },
 
       on: function(cb) {
-        // TODO: .on/.once can take multiple paths like .first, .last, .range
-        var gunCtx = this
-
-        gun.get(function(soul) {
-          if (!soul)
-            return cb.call(gun, { err: Gun.log('TimeGraph ran into .on error, please report this!') })
-
-          root.get('timegraph/' + soul).on(function(timegraph) {
-            var lastTimepoint = timegraph.last['#']
-
-            root.get(lastTimepoint).once(timepoint => {
-              root.get(timepoint.soul).once(function(data, key) {
-                if (withinDate(timegraph.state, startDate, stopDate))
-                  cb && cb(data, key, timegraph.state)
-              })
-            })
-          })
-        }, true)
-
-        return gunCtx
+        return chainEvent.call(this, 'on', cb)
       },
 
       off: function() {
-        gun.get(function(soul) {
-          if (!soul)
-            return Gun.log('TimeGraph ran into .on error, please report this!')
-
-          root.get('timegraph/' + soul).off()
-        }, true)
+        return chainEvent.call(this, 'off')
       },
     }
 
-    return nodeProxyPoly(gun, timeMethods)
-  }
+    function nodeProxyPoly(node, props) {
+      var nodeProps = {}
+      for (var key of Object.keys(props)) {
+        nodeProps[key] = { value: props[key] }
+      }
 
-  function nodeProxyPoly(node, props) {
-    var nodeProps = {}
-    for (var key of Object.keys(props)) {
-      nodeProps[key] = { value: props[key] }
+      var newNode = Object.create(node, nodeProps)
+      newNode = Object.assign(newNode, node)
+
+      return newNode
     }
 
-    var newNode = Object.create(node, nodeProps)
-    newNode = Object.assign(newNode, node)
+    function withinDate(checkDate, startDate, stopDate) {
+      // If startDate and stopDate are provided, check within bounds
+      console.log(checkDate, startDate, stopDate)
 
-    return newNode
-  }
+      if (startDate && stopDate)
+        if (checkDate >= startDate && checkDate <= stopDate)
+          return true
+        else
+          return false
 
-  function withinDate(checkDate, startDate, stopDate) {
-    // If startDate and stopDate are provided, check within bounds
-    console.log(checkDate, startDate, stopDate)
-
-    if (startDate && stopDate)
-      if (checkDate >= startDate && checkDate <= stopDate)
-        return true
-      else
+      // If startDate only provided
+      if (startDate && startDate >= checkDate) {
+        console.warn('Data outside startDate')
         return false
-
-    // If startDate only provided
-    if (startDate && startDate >= checkDate) {
-      console.warn('Data outside startDate')
-      return false
-    }
-
-    // if stopDate only provided
-    if (stopDate && stopDate <= checkDate) {
-      console.log('Data outside stopDate')
-      return false
-    }
-
-    return true
-  }
-
-  function firstNode(data) {
-    // This function takes a timepoint and recurses into it to find a ref to the first node.
-    var isLastNode = false
-    var lowestKey = null
-
-    for (var key of Object.keys(data)) {
-      if (key === '_')
-        continue
-
-      if (key === 'soul') {
-        isLastNode = true
-        continue
       }
 
-      if (key < lowestKey)
-        lowestKey = key
-
-      // TODO: do until first(count), then break out of for.
-      // Each key should at least contain one.. replace top level root items as we go along.
-
-      // TODO: Stack overflow, Performant highly nested first/last $num items
-      /*
-      {
-        2018: { // year
-          12: { // month
-            28: { // Day
-              13: { someData }, // 24: hour
-              14: { someData }, // 24: hour
-              15: { someData }, // 24: hour
-            },
-            29: { // Day
-              15: { someData }, // 24: hour
-            },
-            30: { // Day
-              15: { someData }, // 24: hour
-            },
-          },
-        },
-
-        2019: { // year
-          1: { // month
-            1: { // Day
-              16: { someData }, // 24-hour
-            },
-          },
-        },
+      // if stopDate only provided
+      if (stopDate && stopDate <= checkDate) {
+        console.log('Data outside stopDate')
+        return false
       }
-      */
+
+      return true
     }
 
-    if (isLastNode)
-      return lowestKeyRef
+    function chainEvent(event, cb, soulOnly) {
+      // TODO: .on/.once can take multiple paths like .first, .last, .range
+      cb = (cb instanceof Function && cb) || function(){}
 
-    // todo: may use a range array for this.
+      gun.get(function(soul) {
+        if (!soul)
+          return cb.call(gun, { err: Gun.log('TimeGraph ran into .on error, please report this!') })
 
+        root.get('timegraph/' + soul)[event](function(timegraph) {
+          if (!withinDate(timegraph.state, startDate, stopDate))
+            return
+
+          root.get(timegraph.last['#']).once(function(timepoint, key) {
+            if (soulOnly)
+              return cb(timepoint.soul, key, timegraph.state)
+
+            root.get(timepoint.soul).once(function(data, key) {
+              cb(data, key, timegraph.state)
+            })
+          })
+        })
+      }, true)
+
+      return this
+    }
+
+    return nodeProxyPoly(gun, timeMethods)
   }
 
   // Shim for backward compatibility
