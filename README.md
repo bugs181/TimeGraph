@@ -54,6 +54,7 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 # Events:
 * `node.time().once` : Fires once for each piece of data in TimeGraph, filtering is done using timegraph methods
 * `node.time().on` : Fires continuosly for each piece of data in TimeGraph, filtering is done using timegraph methods
+* `node.time().time(callback)` : Subscribes to timegraph, returns `(data, key, time)`, where `data` is a node-ref.
 
 <br>
 
@@ -61,6 +62,7 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 * `node.time().get` : Retrieve data as normal with TimeGraph filtering if provided. Does not affect children nodes.
 * `node.time().put` : Put data into TimeGraph index using filter, if outside of bounds nothing is pushed into gun if `enforceData` is provided via opts.
 * `node.time().set` : Same as put
+* `node.time().time(data)` : Proxy/Shim for `.set` to provide a drop-in replacement for existing API.
 
 <br>
 
