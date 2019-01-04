@@ -128,6 +128,27 @@
       off: function() {
         return chainEvent.call(this, 'off')
       },
+
+      // Subset of API for filtering
+      range: function(startRange, stopRange) {
+      },
+
+      pause: function() {
+      },
+
+      continue: function() {
+      },
+
+      done: function() {
+      },
+
+      filter: function() {
+      },
+
+      // Transformation API
+      transform(cb) {
+        // Transforms data from a Gun chain before being passed.
+      },
     }
 
     function nodeProxyPoly(node, props) {
