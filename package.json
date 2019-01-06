@@ -4,7 +4,7 @@
   "description": "TimeGraph implementation for Gun",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "homepage": "https://github.com/bugs181/TimeGraph#readme",
   "keywords": [
@@ -22,5 +22,12 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bugs181/TimeGraph.git"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "gun": "git+https://github.com/amark/gun.git",
+    "mocha": "^5.2.0",
+    "nodemon": "^1.18.9",
+    "should": "^13.2.3"
   }
 }
