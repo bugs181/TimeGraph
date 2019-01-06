@@ -9,7 +9,7 @@ module.exports = function(wallaby) {
     ],
 
     tests: [
-      'tests/**.js',
+      'test/**.js',
     ],
 
     env: {
