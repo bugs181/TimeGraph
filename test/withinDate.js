@@ -28,25 +28,25 @@ function withinDate(checkDate, startDate, stopDate) {
 }
 
 describe('Test Basic Algorithm', function() {
-  describe('No date range provided, should always return true', function() {
+  it('No date range provided, should always return truet', function() {
     expect(withinDate(1)).to.be.true
   })
 
-  describe('Start date only supplied', function() {
+  it('Start date only supplied', function() {
     expect(withinDate(1, 3)).to.be.false
     expect(withinDate(2, 3)).to.be.false
     expect(withinDate(3, 3)).to.be.true
     expect(withinDate(4, 3)).to.be.true
   })
 
-  describe('Stop date only supplied', function() {
+  it('Stop date only supplied', function() {
     expect(withinDate(1, null, 3)).to.be.true
     expect(withinDate(2, null, 3)).to.be.true
     expect(withinDate(3, null, 3)).to.be.true
     expect(withinDate(4, null, 3)).to.be.false
   })
 
-  describe('Dates with ranges', function() {
+  it('Dates with ranges', function() {
     expect(withinDate(1, 1, 3)).to.be.true
     expect(withinDate(2, 1, 3)).to.be.true
     expect(withinDate(3, 1, 3)).to.be.true
@@ -59,24 +59,24 @@ describe('Test real dates', function() {
   var yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
   var tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1)
 
-  describe('No date range provided, should always return true', function() {
+  it('No date range provided, should always return true', function() {
     expect(withinDate(today)).to.be.true
   })
 
-  describe('Start date only supplied', function() {
+  it('Start date only supplied', function() {
     expect(withinDate(today, today)).to.be.true
     expect(withinDate(today, tomorrow)).to.be.false
     expect(withinDate(today, yesterday)).to.be.true
   })
 
-  describe('Stop date only supplied', function() {
+  it('Stop date only supplied', function() {
     expect(withinDate(today, null, today)).to.be.true
     expect(withinDate(today, null, tomorrow)).to.be.true
     expect(withinDate(today, null, yesterday)).to.be.false
   })
 
   describe('Dates with ranges', function() {
-    describe('Today within range', function() {
+    it('Today within range', function() {
       expect(withinDate(today, today, today)).to.be.true
       expect(withinDate(today, today, tomorrow)).to.be.true
       expect(withinDate(today, today, yesterday)).to.be.false
@@ -90,7 +90,7 @@ describe('Test real dates', function() {
       expect(withinDate(today, tomorrow, yesterday)).to.be.false
     })
 
-    describe('Yesterday within range', function() {
+    it('Yesterday within range', function() {
       expect(withinDate(yesterday, today, today)).to.be.false
       expect(withinDate(yesterday, today, tomorrow)).to.be.false
       expect(withinDate(yesterday, today, yesterday)).to.be.false
@@ -104,7 +104,7 @@ describe('Test real dates', function() {
       expect(withinDate(yesterday, tomorrow, yesterday)).to.be.false
     })
 
-    describe('Tomorrow within range', function() {
+    it('Tomorrow within range', function() {
       expect(withinDate(tomorrow, today, today)).to.be.false
       expect(withinDate(tomorrow, today, tomorrow)).to.be.true
       expect(withinDate(tomorrow, today, yesterday)).to.be.false
