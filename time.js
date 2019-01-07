@@ -14,6 +14,7 @@
     var opts = gun && gun._ && gun._.root && gun._.root.opt
     var enforceData = opts.enforceData
 
+    // TODO: These will likely be moved into timeState obj.
     var startDate, stopDate
     if (startDateOpt && (startDateOpt instanceof Date || typeof startDateOpt === 'number' || typeof startDateOpt === 'string'))
       startDate = new Date(startDateOpt).getTime()
@@ -21,6 +22,17 @@
     if (stopDateOpt && (stopDateOpt instanceof Date || typeof stopDateOpt === 'number' || typeof stopDateOpt === 'string'))
       stopDate = new Date(stopDateOpt).getTime()
 
+    // Object to store the state of window/buffer
+    var timeState = {
+      now: 0,
+
+      range: {
+        low: 0,
+        high: 0,
+      },
+
+      newItemCount: 0,
+    }
 
     var timeMethods = {
 
@@ -62,7 +74,7 @@
         }
 
         gun.get(function(soul) {
-          // This fixes .set(), because .set does not have a soul yet. Passing soul to gun.put() creates weird behavior, so not a solution.
+          // This fixes odd behavior like .set(), because .set does not have a soul on first .put. Passing soul to gun.put() creates weird behavior, so not a solution.
           if (!soul)
             return timeMethods.put.call(gunCtx, gun.put.call(gunCtx, data, null, as), cb)
 
@@ -76,7 +88,7 @@
           var rid = 'timepoint/' + soul
           t = [rid].concat(t)
 
-          // Working example of original modified slightly
+          // Working example of original modified slightly. Will later work this into a loop.
           var milli = ify({}, t.join(':'))
           milli['soul'] = rSoul
 
@@ -110,7 +122,7 @@
           var time = ify({}, t.join(':') || 'id')
           time[tmp] = year
 
-          var timepoint = milli //milli //time
+          var timepoint = time //milli //time
           root.put.call(root, { last: milli, state: Gun.state(), timepoint, soul }, 'timegraph/' + soul)
         }, true)
 
@@ -131,6 +143,17 @@
 
       // Subset of API for filtering
       range: function(startRange, stopRange) {
+        //timeState.now = Gun.state()
+        //
+        timeState.range.low = startRange
+        timeState.range.high = stopRange
+        traverse.call(this)
+      },
+
+      first: function(count) {
+      },
+
+      last: function(count) {
       },
 
       pause: function() {
@@ -139,7 +162,10 @@
       continue: function() {
       },
 
-      done: function() {
+      done: function(cb) {
+        // cb will pass new items count since last Gun emit event, potentially along with timegraph of those items. (Requires array or obj, but may be better in user-land)
+        // cb(timeState.newItemCount). The reason this is a seperate API method and not part of .range, .first, etc is so that it can be used in the future for other things.
+
       },
 
       filter: function() {
@@ -148,6 +174,10 @@
       // Transformation API
       transform(cb) {
         // Transforms data from a Gun chain before being passed.
+      },
+
+      withinDate() {
+        return withinDate.apply(this, arguments)
       },
     }
 
@@ -165,7 +195,7 @@
 
     function withinDate(checkDate, startDate, stopDate) {
       // If startDate and stopDate are provided, check within bounds
-      console.log(checkDate, startDate, stopDate)
+      //console.log(checkDate, startDate, stopDate)
 
       if (startDate && stopDate)
         if (checkDate >= startDate && checkDate <= stopDate)
@@ -174,14 +204,12 @@
           return false
 
       // If startDate only provided
-      if (startDate && startDate >= checkDate) {
-        console.warn('Data outside startDate')
+      if (startDate && startDate > checkDate) {
         return false
       }
 
       // if stopDate only provided
-      if (stopDate && stopDate <= checkDate) {
-        console.log('Data outside stopDate')
+      if (stopDate && stopDate < checkDate) {
         return false
       }
 
@@ -212,6 +240,27 @@
       }, true)
 
       return this
+    }
+
+    function traverse() {
+      //console.log(timegraph)
+      //var t = new Date(Gun.state()).toISOString().split(/[\-t\:\.z]/ig)
+
+      gun.get(function(soul) {
+        root.get('timepoint/' + soul).once(function(timepoint) {
+          console.log(timepoint)
+          for (var key of Object.keys(timepoint)) {
+            if (key === '_')
+              continue
+
+            timeState.now = new Date(key).getTime() //.toISOString()
+            if (withinDate(timeState.now, timeState.range.low, timeState.range.high))
+              console.log('within time')
+            else
+              console.log('not within time')
+          }
+        })
+      }, true)
     }
 
     return nodeProxyPoly(gun, timeMethods)

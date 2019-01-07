@@ -24,6 +24,7 @@
     "url": "git+https://github.com/bugs181/TimeGraph.git"
   },
   "devDependencies": {
+    "benchmark": "^2.1.4",
     "chai": "^4.2.0",
     "gun": "git+https://github.com/amark/gun.git",
     "mocha": "^5.2.0",

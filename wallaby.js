@@ -5,6 +5,7 @@ module.exports = function(wallaby) {
   return {
     files: [
       'time.js',
+      'lib/time.js',
       'memorystorage.js',
     ],
 

@@ -3,32 +3,16 @@
 var chai = require('chai')
 var expect = chai.expect
 
-// Setup algo
-function withinDate(checkDate, startDate, stopDate) {
-  // If startDate and stopDate are provided, check within bounds
-  //console.log(checkDate, startDate, stopDate)
+const Gun = require('gun/gun')
+global.Gun = Gun
+require('../lib/memorystorage')
+require('../time')
 
-  if (startDate && stopDate)
-    if (checkDate >= startDate && checkDate <= stopDate)
-      return true
-    else
-      return false
-
-  // If startDate only provided
-  if (startDate && startDate > checkDate) {
-    return false
-  }
-
-  // if stopDate only provided
-  if (stopDate && stopDate < checkDate) {
-    return false
-  }
-
-  return true
-}
+const gun = Gun()
+const withinDate = gun.timegraph().withinDate
 
 describe('Test Basic Algorithm', function() {
-  it('No date range provided, should always return truet', function() {
+  it('No date range provided, should always return true', function() {
     expect(withinDate(1)).to.be.true
   })
 
