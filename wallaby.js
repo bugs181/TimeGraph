@@ -6,7 +6,7 @@ module.exports = function(wallaby) {
     files: [
       'time.js',
       'lib/time.js',
-      'memorystorage.js',
+      'lib/memorystorage.js',
     ],
 
     tests: [

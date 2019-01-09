@@ -159,7 +159,7 @@
       pause: function() {
       },
 
-      continue: function() {
+      resume: function() {
       },
 
       done: function(cb) {
@@ -182,6 +182,8 @@
     }
 
     function nodeProxyPoly(node, props) {
+      // NOTE: Alternative method would be to just redeclare gun.chain.apiMethod and proxy those instead.
+
       var nodeProps = {}
       for (var key of Object.keys(props)) {
         nodeProps[key] = { value: props[key] }
@@ -246,6 +248,30 @@
       //console.log(timegraph)
       //var t = new Date(Gun.state()).toISOString().split(/[\-t\:\.z]/ig)
 
+      // var r = gun.__.opt.hooks.all(keys, {from: 'user/', upto: '/', start: "c", end: "f"});
+
+      // TODO: Some idea that takes high num - low num to find middle, and store timepoint refs inebtween a sparse array type thing.
+      // Then build a timeIndex of inbetween values. This would be at most 100 to 500 datapoints, changed with a cacheLevel opt config.
+      // 100 datapoints on average, 500 for medium sized data, etc.
+
+      // .from(myLastVisit).to(whenPageLoaded).map().once()
+
+      root.get(function(timepoint, ev) {
+        console.log(arguments)
+      }, true)
+
+      gun.get(function(soul) {
+        gun.get(function(timepoint, ev) {
+          console.log(arguments)
+        })
+        /*gun.get('timepoint/' + soul).get(function(timepoint, ev) {
+          console.log(arguments)
+        })*/
+      }, true)
+      return this
+
+
+
       gun.get(function(soul) {
         root.get('timepoint/' + soul).once(function(timepoint) {
           console.log(timepoint)
@@ -261,6 +287,10 @@
           }
         })
       }, true)
+    }
+
+    function traverseRemote() {
+
     }
 
     return nodeProxyPoly(gun, timeMethods)
