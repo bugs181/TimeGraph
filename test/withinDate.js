@@ -1,5 +1,8 @@
 /* eslint-disable no-undef */
 
+const mocha = require('../lib/mocha-log')
+const perf = mocha.perf
+
 var chai = require('chai')
 var expect = chai.expect
 
@@ -8,48 +11,39 @@ global.Gun = Gun
 require('../lib/memorystorage')
 require('../time')
 
-const mocha = require('../lib/mocha-log')
-const perf = mocha.perf
-
 const gun = Gun()
 const withinDate = gun.timegraph().withinDate
 
-function measure(label, count, cb) {
-  let counter = count
-
-  return function callback() {
-    counter--
-    if (counter === 0) {
-      cb && cb()
-    }
-  }
-}
 
 describe('withinDate function tests:', function() {
   describe('Test Basic Algorithm', function() {
-    it('No date range provided, should always return true', function() {
+    perf('No date range provided, should always return true', function(done) {
       expect(withinDate(1)).to.be.true
+      done()
     })
 
-    it('Start date only supplied', function() {
+    perf('Start date only supplied', function(done) {
       expect(withinDate(1, 3)).to.be.false
       expect(withinDate(2, 3)).to.be.false
       expect(withinDate(3, 3)).to.be.true
       expect(withinDate(4, 3)).to.be.true
+      done()
     })
 
-    it('Stop date only supplied', function() {
+    perf('Stop date only supplied', function(done) {
       expect(withinDate(1, null, 3)).to.be.true
       expect(withinDate(2, null, 3)).to.be.true
       expect(withinDate(3, null, 3)).to.be.true
       expect(withinDate(4, null, 3)).to.be.false
+      done()
     })
 
-    it('Dates with ranges', function() {
+    perf('Dates with ranges', function(done) {
       expect(withinDate(1, 1, 3)).to.be.true
       expect(withinDate(2, 1, 3)).to.be.true
       expect(withinDate(3, 1, 3)).to.be.true
       expect(withinDate(4, 1, 3)).to.be.false
+      done()
     })
   })
 
@@ -58,24 +52,27 @@ describe('withinDate function tests:', function() {
     var yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
     var tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1)
 
-    it('No date range provided, should always return true', function() {
+    perf('No date range provided, should always return true', function(done) {
       expect(withinDate(today)).to.be.true
-    })
+      done()
+    }).add()
 
-    it('Start date only supplied', function() {
+    perf('Start date only supplied', function(done) {
       expect(withinDate(today, today)).to.be.true
       expect(withinDate(today, tomorrow)).to.be.false
       expect(withinDate(today, yesterday)).to.be.true
-    })
+      done()
+    }).add()
 
-    it('Stop date only supplied', function() {
+    perf('Stop date only supplied', function(done) {
       expect(withinDate(today, null, today)).to.be.true
       expect(withinDate(today, null, tomorrow)).to.be.true
       expect(withinDate(today, null, yesterday)).to.be.false
-    })
+      done()
+    }).add()
 
     describe('Dates with ranges', function() {
-      it('Today within range', function() {
+      perf('Today within range', function(done) {
         expect(withinDate(today, today, today)).to.be.true
         expect(withinDate(today, today, tomorrow)).to.be.true
         expect(withinDate(today, today, yesterday)).to.be.false
@@ -87,9 +84,10 @@ describe('withinDate function tests:', function() {
         expect(withinDate(today, tomorrow, today)).to.be.false
         expect(withinDate(today, tomorrow, tomorrow)).to.be.false
         expect(withinDate(today, tomorrow, yesterday)).to.be.false
-      })
+        done()
+      }).add()
 
-      it('Yesterday within range', function() {
+      perf('Yesterday within range', function(done) {
         expect(withinDate(yesterday, today, today)).to.be.false
         expect(withinDate(yesterday, today, tomorrow)).to.be.false
         expect(withinDate(yesterday, today, yesterday)).to.be.false
@@ -101,9 +99,10 @@ describe('withinDate function tests:', function() {
         expect(withinDate(yesterday, tomorrow, today)).to.be.false
         expect(withinDate(yesterday, tomorrow, tomorrow)).to.be.false
         expect(withinDate(yesterday, tomorrow, yesterday)).to.be.false
-      })
+        done()
+      }).add()
 
-      it('Tomorrow within range', function() {
+      perf('Tomorrow within range', function(done) {
         expect(withinDate(tomorrow, today, today)).to.be.false
         expect(withinDate(tomorrow, today, tomorrow)).to.be.true
         expect(withinDate(tomorrow, today, yesterday)).to.be.false
@@ -115,12 +114,14 @@ describe('withinDate function tests:', function() {
         expect(withinDate(tomorrow, tomorrow, today)).to.be.false
         expect(withinDate(tomorrow, tomorrow, tomorrow)).to.be.true
         expect(withinDate(tomorrow, tomorrow, yesterday)).to.be.false
-      })
+        done()
+      }).add()
     })
   })
 
   describe('Performance (x1000): ', function() {
-    this.timeout(Infinity)
+    mocha.apply(this.timeout(Infinity))
+    mocha.apply(this.slow(100))
 
     let testNum = 1000
 
@@ -128,13 +129,15 @@ describe('withinDate function tests:', function() {
     var yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
     var tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1)
 
-    perf('withinDate(tomorrow, today, today)', function(done) {
-      let i = 0
+    for (let perfTest of mocha.tests) {
+      perf(perfTest.description, function(done) {
+        let i = 0
+        for (; i < testNum; i++) {
+          perfTest.perf()
+        }
+        done()
+      })
+    }
 
-      for (; i < testNum; i++) {
-        expect(withinDate(tomorrow, today, today)).to.be.false
-      }
-      done()
-    })
   })
 })
