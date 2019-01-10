@@ -8,8 +8,22 @@ global.Gun = Gun
 require('../lib/memorystorage')
 require('../time')
 
+const mocha = require('../lib/mocha-log')
+const perf = mocha.perf
+
 const gun = Gun()
 const withinDate = gun.timegraph().withinDate
+
+function measure(label, count, cb) {
+  let counter = count
+
+  return function callback() {
+    counter--
+    if (counter === 0) {
+      cb && cb()
+    }
+  }
+}
 
 describe('withinDate function tests:', function() {
   describe('Test Basic Algorithm', function() {
@@ -102,6 +116,25 @@ describe('withinDate function tests:', function() {
         expect(withinDate(tomorrow, tomorrow, tomorrow)).to.be.true
         expect(withinDate(tomorrow, tomorrow, yesterday)).to.be.false
       })
+    })
+  })
+
+  describe('Performance (x1000): ', function() {
+    this.timeout(Infinity)
+
+    let testNum = 1000
+
+    var today = new Date()
+    var yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
+    var tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1)
+
+    perf('withinDate(tomorrow, today, today)', function(done) {
+      let i = 0
+
+      for (; i < testNum; i++) {
+        expect(withinDate(tomorrow, today, today)).to.be.false
+      }
+      done()
     })
   })
 })

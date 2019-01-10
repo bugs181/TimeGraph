@@ -7,6 +7,7 @@ module.exports = function(wallaby) {
       'time.js',
       'lib/time.js',
       'lib/memorystorage.js',
+      'lib/mocha-log.js',
     ],
 
     tests: [
