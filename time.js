@@ -122,6 +122,8 @@
           var time = ify({}, t.join(':') || 'id')
           time[tmp] = year
 
+          // TODO: FIXME: Need to fix dangling : on last item.
+
           var timepoint = time //milli //time
           root.put.call(root, { last: milli, state: Gun.state(), timepoint, soul }, 'timegraph/' + soul)
         }, true)
@@ -147,7 +149,7 @@
         //
         timeState.range.low = startRange
         timeState.range.high = stopRange
-        traverse.call(this)
+        //traverse.call(this)
       },
 
       first: function(count) {
