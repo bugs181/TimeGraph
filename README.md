@@ -55,6 +55,16 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 * `node.time().once` : Fires once for each piece of data in TimeGraph, filtering is done using timegraph methods
 * `node.time().on` : Fires continuosly for each piece of data in TimeGraph, filtering is done using timegraph methods
 * `node.time().time(callback)` : Subscribes to timegraph, returns `(data, key, time)`, where `data` is a node-ref.
+* `node.time().range` : Create a range for TimeGraph traversal. Uses the same semantics as `.time()`
+* `node.time().off` : Gun safety ;)
+
+<br>
+
+# Range Events:
+* `range().once` : Same as `node.time().once`
+* `range().on` : Same as `node.time().on`
+* `range().time` : Same as `node.time().time(callback)`
+* `range().off` : Gun safety ;)
 
 <br>
 
@@ -74,8 +84,8 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
     }
 
     'timegraph/dataNodeSoul': {
-        first: state + lex,
-        last: state + lex,
+        first: { '#': 'timepoint/dataNodeSoul' },
+        last: { '#': 'timepoint/dataNodeSoul' },
         soul: 'dataNodeSoul',
         timepoint: { '#': 'timepoint/dataNodeSoul' },
     }
@@ -117,10 +127,10 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 
       'timegraph/jqg3tkqn3HtZtCCrOucM': { 
         _: { '#': 'timegraph/jqg3tkqn3HtZtCCrOucM', ... },
-        first: 1546489336128.001,
-        last: 1546489336132.003,
+        first: { '#': 'timepoint/milli' },
+        last: { '#': 'timepoint/milli' },
         soul: 'jqg3tkqn3HtZtCCrOucM',
-        timepoint: { '#': 'timepoint/jqg3tkqn3HtZtCCrOucM:2019' },
+        timepoint: { '#': 'timepoint/jqg3tkqn3HtZtCCrOucM' },
       },
 
       ...timepoint/jqg3tkqn3HtZtCCrOucM:2019:...,
@@ -141,7 +151,7 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
     const app = gun.get('app').time()
     app.get('personId').put(Math.floor(Math.random() * 11))  
 
-## Structure:
+## Structure: (Out of date; has not been updated to reflect status)
     { 
       app: { 
         _: { '#': 'app', '>': { personId: 1545661692548, timegraph: 1545661692659.001 } },
@@ -212,13 +222,19 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
           '22': { // Day
             '10': { // Hour
               53: { // Min
-                dataNodeSoul,
-                dataNodeSoul,
+                05: { // Sec
+                  572: { // ms
+                    soul: dataNodeSoul
+                  }
+                }
               },
               54: { // Min
-                dataNodeSoul,
-                dataNodeSoul,
-              }
+                05: { // Sec
+                  572: { // ms
+                    soul: dataNodeSoul
+                  }
+                }
+              },
             }
           }
         }
