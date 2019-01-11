@@ -86,17 +86,6 @@
   }
 
 
-  // Shim for backward compatibility
-  var origTimegraph = (typeof Gun.chain.time !== 'undefined') ? Gun.chain.time : null
-  if (origTimegraph)
-    return console.warn('Warning: Original .time() API detected! Please remove it from your project to use the new API.')
-
-  Gun.chain.time = function(data, a, b) {
-    if (b)
-      console.warn('Warning: Detected that you are still using the old TimeGraph API, we recommend switching to the new API syntax for more features and better stability.')
-
-    return Gun.chain.timegraph.time.apply(this, data, a)
-  }
 
   Gun.chain.timegraph.time = function(data, cb) {
     if (data instanceof Function) {
@@ -262,6 +251,9 @@
     // Transforms data from a Gun chain before being passed.
   }
 
+  // Exposed helpers
+  Gun.chain.timegraph.withinDate = withinDate
+
 
   function withinDate(checkDate, startDate, stopDate) {
     // If startDate and stopDate are provided, check within bounds
@@ -284,6 +276,19 @@
     }
 
     return true
+  }
+
+
+  // Shim for backward compatibility
+  var origTimegraph = (typeof Gun.chain.time !== 'undefined') ? Gun.chain.time : null
+  if (origTimegraph)
+    return console.warn('Warning: Original .time() API detected! Please remove it from your project to use the new API.')
+
+  Gun.chain.time = function(data, a, b) {
+    if (b)
+      console.warn('Warning: Detected that you are still using the old TimeGraph API, we recommend switching to the new API syntax for more features and better stability.')
+
+    return Gun.chain.timegraph.time.apply(this, data, a)
   }
 
 }())
