@@ -4,7 +4,7 @@
   "description": "TimeGraph implementation for Gun",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha -A"
   },
   "homepage": "https://github.com/bugs181/TimeGraph#readme",
   "keywords": [
