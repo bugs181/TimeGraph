@@ -80,7 +80,9 @@
     Gun.chain.timegraph.on = Gun.chain.timegraph.event(gun, 'on')
     Gun.chain.timegraph.offEvent = Gun.chain.timegraph.event(gun, 'off')
     Gun.chain.timegraph.timeEvent = Gun.chain.timegraph.event(gun, 'on', true)
-    // rangeEventOn ??
+
+    // Stubs for range API.
+    // Gun.chain.timegraph.range.on = Gun.chain.timegraph.rangeEvent(gun, 'on')
 
     return gunProxy(gun, Gun.chain.timegraph)
   }
@@ -162,7 +164,7 @@
       time[tmp] = year
 
       var timepoint = time //milli //time
-      root.put.call(root, { last: milli, state: Gun.state(), timepoint, soul }, 'timegraph/' + soul)
+      root.put.call(root, { last: milli, timepoint, soul }, 'timegraph/' + soul)
 
       timeState.graph.high = t
       timeState.graphKey.high = milliSoul
@@ -186,8 +188,47 @@
           if (!timegraph.last)
             return
 
-          var state = timegraph._['>'].timepoint
-          if (!withinDate(state, timeState.startDate, timeState.stopDate))
+          var state = Gun.state.is(timegraph, 'timepoint')
+          if (!isFinite(state))
+            return
+
+          if (!withinRange(state, timeState.startDate, timeState.stopDate))
+            return
+
+          var stateDate = new Date(state).getTime() // || function userProvided() {}
+          root.get(timegraph.last['#']).once(function(timepoint, key) {
+            if (soulOnly)
+              return cb(ify({}, timepoint.soul), key, stateDate)
+
+            root.get(timepoint.soul).once(function(data, key) {
+              cb(data, key, stateDate)
+            })
+          })
+        })
+      }, true)
+
+      return this
+    }
+  }
+
+  Gun.chain.timegraph.rangeEvent = function(gun, event, soulOnly) {
+    return function chainEvent(cb) {
+      cb = (cb instanceof Function && cb) || function(){}
+
+      // Not using range, so detour them to TimeGraph node.
+      gun.get(function(soul) {
+        if (!soul)
+          return cb.call(gun, { err: Gun.log('TimeGraph ran into .on error, please report this!') })
+
+        root.get('timegraph/' + soul)[event](function(timegraph) {
+          if (!timegraph.last)
+            return
+
+          var state = Gun.state.is(timegraph, 'timepoint')
+          if (!isFinite(state))
+            return
+
+          if (!withinRange(state, timeState.startDate, timeState.stopDate))
             return
 
           var stateDate = new Date(state).getTime() // || function userProvided() {}
@@ -252,26 +293,27 @@
   }
 
   // Exposed helpers
-  Gun.chain.timegraph.withinDate = withinDate
+  Gun.chain.timegraph.withinDate = withinRange
+  Gun.chain.timegraph.withinRange = withinRange
 
 
-  function withinDate(checkDate, startDate, stopDate) {
+  function withinRange(checkRange, startRange, stopRange) {
     // If startDate and stopDate are provided, check within bounds
-    //console.log(checkDate, startDate, stopDate)
+    console.log(checkRange, startRange, stopRange)
 
-    if (startDate && stopDate)
-      if (checkDate >= startDate && checkDate <= stopDate)
+    if (startRange && stopRange)
+      if (checkRange >= startRange && checkRange <= stopRange)
         return true
       else
         return false
 
     // If startDate only provided
-    if (startDate && startDate > checkDate) {
+    if (startRange && startRange > checkRange) {
       return false
     }
 
     // if stopDate only provided
-    if (stopDate && stopDate < checkDate) {
+    if (stopRange && stopRange < checkRange) {
       return false
     }
 
