@@ -48,6 +48,7 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 * `node.time().first(number)` : Grab first `$num` items in TimeGraph
 * `node.time().last(number)` : Grab last `$num` items in TimeGraph
 * `node.time().filter(function(graphItem))` : Additional TimeGraph filtering if needed
+* `node.time().range` : Create a range for TimeGraph traversal. Uses the same semantics as `.time()`
 
 <br>
 
@@ -55,7 +56,6 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
 * `node.time().once` : Fires once for each piece of data in TimeGraph, filtering is done using timegraph methods
 * `node.time().on` : Fires continuosly for each piece of data in TimeGraph, filtering is done using timegraph methods
 * `node.time().time(callback)` : Subscribes to timegraph, returns `(data, key, time)`, where `data` is a node-ref.
-* `node.time().range` : Create a range for TimeGraph traversal. Uses the same semantics as `.time()`
 * `node.time().off` : Gun safety ;)
 
 <br>
