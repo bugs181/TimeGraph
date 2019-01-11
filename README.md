@@ -140,8 +140,8 @@ Initialize a TimeGraph in node chain for events such as `.get`, `.put`, `.on`, `
         soul: 'jqg3tkqfEal1JtLWkn8V',
       },
 
-      'timepoint/jqg3tkqn3HtZtCCrOucM:2019:01:03:04:22:16:132:': { 
-        _: { '#': 'timepoint/jqg3tkqn3HtZtCCrOucM:2019:01:03:04:22:16:132:', ... },
+      'timepoint/jqg3tkqn3HtZtCCrOucM:2019:01:03:04:22:16:132': { 
+        _: { '#': 'timepoint/jqg3tkqn3HtZtCCrOucM:2019:01:03:04:22:16:132', ... },
         soul: 'jqg3tkqrA9XCHBE1Vd7s', 
       },
     }
