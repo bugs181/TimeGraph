@@ -289,7 +289,7 @@
 
   function withinRange(checkRange, startRange, stopRange) {
     // If startDate and stopDate are provided, check within bounds
-    console.log(checkRange, startRange, stopRange)
+    //console.log(checkRange, startRange, stopRange)
 
     if (startRange && stopRange)
       if (checkRange >= startRange && checkRange <= stopRange)
