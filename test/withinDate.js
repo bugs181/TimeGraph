@@ -125,10 +125,6 @@ describe('withinDate function tests:', function() {
 
     let testNum = 1000
 
-    var today = new Date()
-    var yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
-    var tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1)
-
     for (let perfTest of mocha.tests) {
       perf(perfTest.description, function(done) {
         let i = 0
