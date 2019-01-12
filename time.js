@@ -37,6 +37,7 @@
 
     newItemCount: 0,
     usingRange: false,
+    cursor: 0,
   }
 
   function gunProxy(node, props) {
@@ -76,17 +77,23 @@
     Gun.chain.timegraph.set = methodProxy(gun, 'set')
     Gun.chain.timegraph.map = methodProxy(gun, 'map')
 
-    Gun.chain.timegraph.once = Gun.chain.timegraph.event(gun, 'once')
     Gun.chain.timegraph.on = Gun.chain.timegraph.event(gun, 'on')
+    Gun.chain.timegraph.once = Gun.chain.timegraph.event(gun, 'once')
     Gun.chain.timegraph.offEvent = Gun.chain.timegraph.event(gun, 'off')
     Gun.chain.timegraph.timeEvent = Gun.chain.timegraph.event(gun, 'on', true)
 
-    // Stubs for range API.
-    // Gun.chain.timegraph.range.on = Gun.chain.timegraph.rangeEvent(gun, 'on')
+    // Events for range API.
+    Gun.chain.timegraph.range.on = Gun.chain.timegraph.rangeEvent(gun, 'on')
+    Gun.chain.timegraph.range.once = Gun.chain.timegraph.rangeEvent(gun, 'once')
+    Gun.chain.timegraph.range.off = Gun.chain.timegraph.event(gun, 'off')
+    Gun.chain.timegraph.range.time = Gun.chain.timegraph.time
+
+    // Exposed helpers
+    Gun.chain.timegraph.withinDate = withinRange
+    Gun.chain.timegraph.withinRange = withinRange
 
     return gunProxy(gun, Gun.chain.timegraph)
   }
-
 
 
   Gun.chain.timegraph.time = function(data, cb) {
@@ -99,7 +106,6 @@
   }
 
   Gun.chain.timegraph.put = function(data, cb, as, rSoul) {
-    //console.log('put called')
     var gunCtx = this
 
     if (Gun.is(data)) {
@@ -123,7 +129,8 @@
       if (!rSoul)
         rSoul = (as && as.item && as.item._ && as.item._.soul) || soul
 
-      var t = new Date(Gun.state()).toISOString().split(/[\-t\:\.z]/ig)
+      var d = new Date(Gun.state())
+      var t = d.toISOString().split(/[\-t\:\.z]/ig)
       var rid = 'timepoint/' + soul
       t = [rid].concat(t)
 
@@ -166,9 +173,11 @@
       var timepoint = time //milli //time
       root.put.call(root, { last: milli, timepoint, soul }, 'timegraph/' + soul)
 
-      timeState.graph.high = t
+      timeState.graph.high = d.getTime()
       timeState.graphKey.high = milliSoul
-      //console.log(timeState)
+
+      // TODO: Can we use node().not() to insert `first` prop above? Then chain off of that?
+      // root.not().put.call(root, { first: milli }, 'timegraph/' + soul)
     }, true)
 
     return gunCtx
@@ -179,18 +188,18 @@
     return function chainEvent(cb) {
       cb = (cb instanceof Function && cb) || function(){}
 
-      // Not using range, so detour them to TimeGraph node.
+      // Detour events to TimeGraph node.
       gun.get(function(soul) {
         if (!soul)
-          return cb.call(gun, { err: Gun.log('TimeGraph ran into .on error, please report this!') })
+          return cb.call(gun, { err: Gun.log('TimeGraph ran into .event error, please report this!') })
 
         root.get('timegraph/' + soul)[event](function(timegraph) {
           if (!timegraph.last)
-            return
+            return cb.call(gun, { err: Gun.log('TimeGraph ran into incomplete node, please report this!') })
 
           var state = Gun.state.is(timegraph, 'timepoint')
           if (!isFinite(state))
-            return
+            return cb.call(gun, { err: Gun.log('TimeGraph ran into invalid state, please report this!') })
 
           if (!withinRange(state, timeState.startDate, timeState.stopDate))
             return
@@ -198,7 +207,7 @@
           var stateDate = new Date(state).getTime() // || function userProvided() {}
           root.get(timegraph.last['#']).once(function(timepoint, key) {
             if (soulOnly)
-              return cb(ify({}, timepoint.soul), key, stateDate)
+              return cb({ '#': timepoint.soul }, key, stateDate)
 
             root.get(timepoint.soul).once(function(data, key) {
               cb(data, key, stateDate)
@@ -212,35 +221,20 @@
   }
 
   Gun.chain.timegraph.rangeEvent = function(gun, event, soulOnly) {
-    return function chainEvent(cb) {
+    return function rangeEvent(cb) {
       cb = (cb instanceof Function && cb) || function(){}
 
-      // Not using range, so detour them to TimeGraph node.
+      console.log('Range event called')
+
       gun.get(function(soul) {
         if (!soul)
-          return cb.call(gun, { err: Gun.log('TimeGraph ran into .on error, please report this!') })
+          return cb.call(gun, { err: Gun.log('TimeGraph ran into .event error, please report this!') })
 
-        root.get('timegraph/' + soul)[event](function(timegraph) {
-          if (!timegraph.last)
-            return
-
-          var state = Gun.state.is(timegraph, 'timepoint')
-          if (!isFinite(state))
-            return
-
-          if (!withinRange(state, timeState.startDate, timeState.stopDate))
-            return
-
-          var stateDate = new Date(state).getTime() // || function userProvided() {}
-          root.get(timegraph.last['#']).once(function(timepoint, key) {
-            if (soulOnly)
-              return cb(ify({}, timepoint.soul), key, stateDate)
-
-            root.get(timepoint.soul).once(function(data, key) {
-              cb(data, key, stateDate)
-            })
-          })
-        })
+        /*getRange('timepoint/' + soul, function(range)  {
+          console.log('Finished getting range')
+          //if (timeState.range.cb instanceof Function)
+          //  timeState.range.cb(range)
+        })*/
       }, true)
 
       return this
@@ -260,11 +254,11 @@
 
   // Subset of API for filtering
   Gun.chain.timegraph.range = function(startRange, stopRange) {
-    // TODO: FIXME: Convert these ranges from Date().getTime()
+    // TODO: FIXME: Convert these ranges from Date().getTime() || user provided serializer
     timeState.range.low = startRange || 0
     timeState.range.high = stopRange || 0
     timeState.usingRange = true
-    return this
+    return Gun.chain.timegraph.range
   }
 
   Gun.chain.timegraph.first = function(count) {
@@ -291,10 +285,6 @@
   Gun.chain.timegraph.transform = function(cb) {
     // Transforms data from a Gun chain before being passed.
   }
-
-  // Exposed helpers
-  Gun.chain.timegraph.withinDate = withinRange
-  Gun.chain.timegraph.withinRange = withinRange
 
 
   function withinRange(checkRange, startRange, stopRange) {
