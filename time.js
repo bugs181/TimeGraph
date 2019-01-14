@@ -230,13 +230,18 @@
 
       gun.get(function(soul) {
         if (!soul)
-          return cb.call(gun, { err: Gun.log('TimeGraph ran into .event error, please report this!') })
+          return cb.call(gun, { err: Gun.log('TimeGraph ran into .rangeEvent error, please report this!') })
 
-        /*getRange('timepoint/' + soul, function(range)  {
-          console.log('Finished getting range')
-          //if (timeState.range.cb instanceof Function)
-          //  timeState.range.cb(range)
-        })*/
+        getRange('timepoint/' + soul, function(timepoint, soul, state) {
+          timeState.cursor++
+
+          if (soulOnly)
+            return cb({ '#': soul }, timepoint, state)
+
+          root.get(soul).once(function(data) {
+            cb(data, timepoint, state)
+          })
+        })
       }, true)
 
       return this
@@ -256,9 +261,21 @@
 
   // Subset of API for filtering
   Gun.chain.timegraph.range = function(startRange, stopRange) {
-    timeState.range.low = granularDate(startRange)
-    timeState.range.high = granularDate(stopRange)
+    timeState.range.low = []
+    timeState.range.high = []
     timeState.usingRange = true
+    timeState.cursor = 0
+
+    if (startRange instanceof Date) // TODO: Do magic
+      timeState.range.low = granularDate(startRange)
+    else
+      console.warn('Warning: Improper start Date used for .range()')
+
+    if (stopRange instanceof Date)
+      timeState.range.high = granularDate(stopRange)
+    else
+      console.warn('Warning: Improper stop Date used for .range()')
+
     return Gun.chain.timegraph.range
   }
 
@@ -314,7 +331,7 @@
   function getRange(soul, callback, depth) {
     console.log('getOpRange', soul)
 
-    gun.get(soul).once(function(timepoint) {
+    root.get(soul).once(function(timepoint) {
       if (!timepoint)
         return
 
@@ -342,7 +359,7 @@
       }
 
       if (timepoint.soul) {
-        return callback({ value: timepoint._['>'].soul, soul: soul })
+        return callback(soul, timepoint.soul, timepoint._['>'].soul)
       }
 
       // Recurse to find timepoint souls
