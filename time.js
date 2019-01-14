@@ -28,16 +28,18 @@
     },
 
     range: {
-      low: 0,
-      high: 0,
+      low: [],
+      high: [],
 
       //now: 0,
       //tot: 0, // keep in sync with timePointIndex.length
     },
 
     newItemCount: 0,
+
     usingRange: false,
     cursor: 0,
+    max: Infinity,
   }
 
   function gunProxy(node, props) {
@@ -254,9 +256,8 @@
 
   // Subset of API for filtering
   Gun.chain.timegraph.range = function(startRange, stopRange) {
-    // TODO: FIXME: Convert these ranges from Date().getTime() || user provided serializer
-    timeState.range.low = startRange || 0
-    timeState.range.high = stopRange || 0
+    timeState.range.low = granularDate(startRange)
+    timeState.range.high = granularDate(stopRange)
     timeState.usingRange = true
     return Gun.chain.timegraph.range
   }
@@ -308,6 +309,85 @@
     }
 
     return true
+  }
+
+  function getRange(soul, callback, depth) {
+    console.log('getOpRange', soul)
+
+    gun.get(soul).once(function(timepoint) {
+      if (!timepoint)
+        return
+
+      if (!depth)
+        depth = 0
+
+      // Retrieve all timepoint keys within range.
+      var low = timeState.range.low[depth]
+      var high = timeState.range.high[depth]
+
+      var keys = []
+      for (var key of Object.keys(timepoint)) {
+        if (key === '_' || key === 'soul')
+          continue
+
+        var tp = (soul + ':' + key).split(':').slice(1)
+        var d = new Date(tp[0], tp[1] - 1 || 0, tp[2] || 1, tp[3] || 0, tp[4] || 0, tp[5] || 0, tp[6] || 0)
+        var ts = granularDate(d)
+
+        // Not in range, move to next
+        if (!withinRange(ts[depth], low, high))
+          continue
+
+        keys.push(key) // Any given timepoint will realistically only have 60 keys at most. (The only exception is milliseconds, which has up to 1000)
+      }
+
+      if (timepoint.soul) {
+        return callback({ value: timepoint._['>'].soul, soul: soul })
+      }
+
+      // Recurse to find timepoint souls
+      keys.sort() // FIXME: Key sorting does not working for 10, 11, 01, 02
+      depth++
+
+      for (var tpKey of keys) {
+        // We already have the amount we asked for, exit from getRange()
+        if (timeState.cursor >= timeState.max)
+          return
+
+        getRange(soul + ':' + tpKey, callback, depth)
+      }
+    })
+  }
+
+  function granularDate(date) {
+    // This method is required for more efficient traversal.
+    // It exists, due to the root Date() may be outside of range, although technically still in it.
+    // For example, with a start range of March 20, 2019 and a stop range of March 21, 2019. The root date returned is just '2019', which has a default of Jaunuary 1, 2019
+    // We break these ranges down into an array so sRange = [year, month, day, hour, min, sec, ms] set appropriately. We check each of these date ranges with a `depth` cursor.
+
+    // TODO: See if there's a more efficient way of doing this.
+
+    var year = new Date(date.getFullYear().toString())
+
+    var month = new Date(year)
+    month.setUTCMonth(date.getUTCMonth())
+
+    var day = new Date(month)
+    day.setUTCDate(date.getUTCDate())
+
+    var hour = new Date(day)
+    hour.setUTCHours(date.getUTCHours())
+
+    var mins = new Date(hour)
+    mins.setUTCMinutes(date.getUTCMinutes())
+
+    var sec = new Date(mins)
+    sec.setUTCSeconds(date.getUTCSeconds())
+
+    var ms = new Date(sec)
+    ms.setUTCMilliseconds(date.getUTCMilliseconds())
+
+    return [year.getTime(), month.getTime(), day.getTime(), hour.getTime(), mins.getTime(), sec.getTime(), ms.getTime()]
   }
 
 
