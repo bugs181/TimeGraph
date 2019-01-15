@@ -62,7 +62,7 @@
   }
 
 
-  Gun.chain.timegraph = function(startDateOpt, stopDateOpt) {
+  Gun.chain.timegraph = function timegraph(startDateOpt, stopDateOpt) {
     gun = this, root = gun.back(-1)
 
     var opts = gun && gun._ && gun._.root && gun._.root.opt
@@ -79,17 +79,6 @@
     Gun.chain.timegraph.set = methodProxy(gun, 'set')
     Gun.chain.timegraph.map = methodProxy(gun, 'map')
 
-    Gun.chain.timegraph.on = Gun.chain.timegraph.event(gun, 'on')
-    Gun.chain.timegraph.once = Gun.chain.timegraph.event(gun, 'once')
-    Gun.chain.timegraph.offEvent = Gun.chain.timegraph.event(gun, 'off')
-    Gun.chain.timegraph.timeEvent = Gun.chain.timegraph.event(gun, 'on', true)
-
-    // Events for range API.
-    Gun.chain.timegraph.range.on = Gun.chain.timegraph.rangeEvent(gun, 'on')
-    Gun.chain.timegraph.range.once = Gun.chain.timegraph.rangeEvent(gun, 'once')
-    Gun.chain.timegraph.range.off = Gun.chain.timegraph.event(gun, 'off')
-    Gun.chain.timegraph.range.time = Gun.chain.timegraph.time
-
     // Exposed helpers
     Gun.chain.timegraph.withinDate = withinRange
     Gun.chain.timegraph.withinRange = withinRange
@@ -98,16 +87,16 @@
   }
 
 
-  Gun.chain.timegraph.time = function(data, cb) {
+  Gun.chain.timegraph.time = function time(data, cb) {
     if (data instanceof Function) {
       cb = data
-      return Gun.chain.timegraph.timeEvent.call(this, cb)
+      return Gun.chain.timegraph.on.call(this, cb)
     }
 
     return gun.timegraph.set.call(this, data, cb)
   }
 
-  Gun.chain.timegraph.put = function(data, cb, as, rSoul) {
+  Gun.chain.timegraph.put = function timePut(data, cb, as, rSoul) {
     var gunCtx = this
 
     if (Gun.is(data)) {
@@ -180,58 +169,54 @@
 
       // TODO: Can we use node().not() to insert `first` prop above? Then chain off of that?
       // root.not().put.call(root, { first: milli }, 'timegraph/' + soul)
+      // Scratch this idea. .put performance is more important than querying..
     }, true)
 
     return gunCtx
   }
 
+  Gun.chain.timegraph.once = function timeOnce(cb, soulOnly) {
+    cb = (cb instanceof Function && cb) || function(){}
 
-  Gun.chain.timegraph.event = function(gun, event, soulOnly) {
-    return function chainEvent(cb) {
-      cb = (cb instanceof Function && cb) || function(){}
+    gun.get(function(soul) {
+      if (!soul)
+        return cb.call(gun, { err: Gun.log('TimeGraph could not determine soul, please report this!') })
 
-      // Detour events to TimeGraph node.
-      gun.get(function(soul) {
-        if (!soul)
-          return cb.call(gun, { err: Gun.log('TimeGraph ran into .event error, please report this!') })
+      // Default to all timepoints if no range is provided.
+      if (!timeState.usingRange) {
+        timeState.range.low = [-Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity]
+        timeState.range.high = [Infinity, Infinity, Infinity, Infinity, Infinity, Infinity, Infinity]
+      }
 
-        root.get('timegraph/' + soul)[event](function(timegraph) {
-          if (!timegraph.last)
-            return cb.call(gun, { err: Gun.log('TimeGraph ran into incomplete node, please report this!') })
+      getRange('timepoint/' + soul, function(timepoint, soul, state) {
+        timeState.cursor++
 
-          var state = Gun.state.is(timegraph, 'timepoint')
-          if (!isFinite(state))
-            return cb.call(gun, { err: Gun.log('TimeGraph ran into invalid state, please report this!') })
+        if (soulOnly)
+          return cb({ '#': soul }, timepoint, state)
 
-          if (!withinRange(state, timeState.startDate, timeState.stopDate))
-            return
-
-          var stateDate = new Date(state).getTime() // || function userProvided() {}
-          root.get(timegraph.last['#']).once(function(timepoint, key) {
-            if (soulOnly)
-              return cb({ '#': timepoint.soul }, key, stateDate)
-
-            root.get(timepoint.soul).once(function(data, key) {
-              cb(data, key, stateDate)
-            })
-          })
+        root.get(soul).once(function(data) {
+          cb.call(gun.timegraph, data, timepoint, state) // Warning: callback(this) refers to the TimeGraph
         })
-      }, true)
+      })
+    }, true)
 
-      return this
-    }
+    return this
   }
 
-  Gun.chain.timegraph.rangeEvent = function(gun, event, soulOnly) {
-    return function rangeEvent(cb) {
-      cb = (cb instanceof Function && cb) || function(){}
+  Gun.chain.timegraph.on = function timeOn(cb, soulOnly) {
+    cb = (cb instanceof Function && cb) || function(){}
 
-      console.log('Range event called')
+    gun.get(function(soul) {
+      if (!soul)
+        return cb.call(gun, { err: Gun.log('TimeGraph could not determine soul, please report this!') })
 
-      gun.get(function(soul) {
-        if (!soul)
-          return cb.call(gun, { err: Gun.log('TimeGraph ran into .rangeEvent error, please report this!') })
+      // Default to all timepoints if no range is provided.
+      if (!timeState.usingRange) {
+        timeState.range.low = [-Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity]
+        timeState.range.high = [Infinity, Infinity, Infinity, Infinity, Infinity, Infinity, Infinity]
+      }
 
+      root.get(soul).on(function() {
         getRange('timepoint/' + soul, function(timepoint, soul, state) {
           timeState.cursor++
 
@@ -239,28 +224,42 @@
             return cb({ '#': soul }, timepoint, state)
 
           root.get(soul).once(function(data) {
-            cb(data, timepoint, state)
+            cb.call(gun.timegraph, data, timepoint, state) // Warning: callback(this) refers to the TimeGraph
           })
-        })
-      }, true)
 
-      return this
-    }
+          // TODO: Update low range to last timepoint.
+          //timeState.range.low = granularDate(new Date(timepoint))
+        })
+      })
+    }, true)
+
+    return this
   }
 
-  Gun.chain.timegraph.off = function() {
+  Gun.chain.timegraph.off = function timeOff(cb) {
     // .time(data).once(callback).off() Will not trigger an update in .time(callback)
     // The equivelant of doing `node.set(data).once(callback).off()`
     // This may be a bug in Gun where calling `.off()` directly after `.once()` results in lost data.
     // See: https://github.com/amark/gun/issues/685
+
+    cb = (cb instanceof Function && cb) || function(){}
+
     timeState.range.low = 0
     timeState.range.high = 0
     timeState.usingRange = false
-    return gun.timegraph.offEvent.call(this)
+
+    gun.get(function(soul) {
+      if (!soul)
+        return cb.call(gun, { err: Gun.log('TimeGraph could not determine soul, please report this!') })
+
+      root.get(soul).off(cb)
+    }, true)
+
+    return this
   }
 
   // Subset of API for filtering
-  Gun.chain.timegraph.range = function(startRange, stopRange) {
+  Gun.chain.timegraph.range = function timeRange(startRange, stopRange) {
     timeState.range.low = []
     timeState.range.high = []
     timeState.usingRange = true
@@ -276,31 +275,35 @@
     else
       console.warn('Warning: Improper stop Date used for .range()')
 
-    return Gun.chain.timegraph.range
+    return this //Gun.chain.timegraph //Gun.chain.timegraph.range
   }
 
-  Gun.chain.timegraph.first = function(count) {
+  Gun.chain.timegraph.first = function timeFirst(count) {
   }
 
-  Gun.chain.timegraph.last = function(count) {
+  Gun.chain.timegraph.last = function timeLast(count) {
   }
 
-  Gun.chain.timegraph.pause = function() {
+  Gun.chain.timegraph.pause = function timePause() {
   }
 
-  Gun.chain.timegraph.resume = function() {
+  Gun.chain.timegraph.resume = function timeResume() {
   }
 
-  Gun.chain.timegraph.done = function(cb) {
+  Gun.chain.timegraph.near = function timeNear() {
+    // This function is to be used in conjunction with .first/.last or .pause/.resume
+  }
+
+  Gun.chain.timegraph.done = function timeDine(cb) {
     // cb will pass new items count since last Gun emit event, potentially along with timegraph of those items. (Requires array or obj, but may be better in user-land)
     // cb(timeState.newItemCount). The reason this is a seperate API method and not part of .range, .first, etc is so that it can be used in the future for other things.
   }
 
-  Gun.chain.timegraph.filter = function() {
+  Gun.chain.timegraph.filter = function timeFilter() {
   }
 
   // Transformation API
-  Gun.chain.timegraph.transform = function(cb) {
+  Gun.chain.timegraph.transform = function timeTransform(cb) {
     // Transforms data from a Gun chain before being passed.
   }
 
@@ -359,6 +362,7 @@
       }
 
       if (timepoint.soul) {
+        // TODO: replace callback state with tp. This will allow .near() and .range(first, last) to be used within callback.
         return callback(soul, timepoint.soul, timepoint._['>'].soul)
       }
 
