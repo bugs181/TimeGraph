@@ -17,29 +17,20 @@
     stopDate: null,
     enforceData: false,
 
-    graph: {
-      low: 0,
-      high: 0,
-    },
-
-    graphKey: {
-      low: null, // Stores lowest soul
-      high: null, // Stores highest soul
-    },
-
     range: {
       low: [],
       high: [],
-
-      //now: 0,
-      //tot: 0, // keep in sync with timePointIndex.length
     },
 
     newItemCount: 0,
 
     usingRange: false,
+    pending: 0,
     cursor: 0,
     max: Infinity,
+    rangeOrder: '<',
+
+    done: function(){},
   }
 
   function gunProxy(node, props) {
@@ -90,7 +81,7 @@
   Gun.chain.timegraph.time = function time(data, cb) {
     if (data instanceof Function) {
       cb = data
-      return Gun.chain.timegraph.on.call(this, cb)
+      return Gun.chain.timegraph.on.call(this, cb, true)
     }
 
     return gun.timegraph.set.call(this, data, cb)
@@ -164,8 +155,8 @@
       var timepoint = time //milli //time
       root.put.call(root, { last: milli, timepoint, soul }, 'timegraph/' + soul)
 
-      timeState.graph.high = d.getTime()
-      timeState.graphKey.high = milliSoul
+      //timeState.graph.high = d.getTime()
+      //timeState.graphKey.high = milliSoul
 
       // TODO: Can we use node().not() to insert `first` prop above? Then chain off of that?
       // root.not().put.call(root, { first: milli }, 'timegraph/' + soul)
@@ -204,33 +195,37 @@
   }
 
   Gun.chain.timegraph.on = function timeOn(cb, soulOnly) {
+    Gun.chain.timegraph.once.apply(this, arguments)
+
     cb = (cb instanceof Function && cb) || function(){}
 
     gun.get(function(soul) {
       if (!soul)
         return cb.call(gun, { err: Gun.log('TimeGraph could not determine soul, please report this!') })
 
-      // Default to all timepoints if no range is provided.
-      if (!timeState.usingRange) {
-        timeState.range.low = [-Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity]
-        timeState.range.high = [Infinity, Infinity, Infinity, Infinity, Infinity, Infinity, Infinity]
-      }
+      root.get('timegraph/' + soul).on(function(timegraph) {
+        // TODO: determine if .on works for nested data, since it may not necessarily be a timepoint index.
+        if (!timegraph.last)
+          return cb.call(gun, { err: Gun.log('TimeGraph ran into incomplete node, please report this!') })
 
-      root.get(soul).on(function() {
-        getRange('timepoint/' + soul, function(timepoint, soul, state) {
-          timeState.cursor++
+        var state = Gun.state.is(timegraph, 'timepoint')
+        if (!isFinite(state))
+          return cb.call(gun, { err: Gun.log('TimeGraph ran into invalid state, please report this!') })
 
+        // TODO: use range.low[length] + range.high[length].. or switch to granularDate(), alternative would be to look into dup.track() and use getRange()
+        if (!withinRange(state, timeState.startDate, timeState.stopDate))
+          return
+
+        var stateDate = new Date(state).getTime() // || function userProvided() {}
+        root.get(timegraph.last['#']).once(function(timepoint, key) {
           if (soulOnly)
-            return cb({ '#': soul }, timepoint, state)
+            return cb({ '#': timepoint.soul }, key, stateDate)
 
-          root.get(soul).once(function(data) {
-            cb.call(gun.timegraph, data, timepoint, state) // Warning: callback(this) refers to the TimeGraph
+          root.get(timepoint.soul).once(function(data, key) {
+            cb.call(this, data, key, stateDate)
           })
-
-          // TODO: Update low range to last timepoint.
-          //timeState.range.low = granularDate(new Date(timepoint))
         })
-      })
+      }, true)
     }, true)
 
     return this
@@ -247,6 +242,7 @@
     timeState.range.low = 0
     timeState.range.high = 0
     timeState.usingRange = false
+    timeState.rangeOrder = '<'
 
     gun.get(function(soul) {
       if (!soul)
@@ -259,23 +255,29 @@
   }
 
   // Subset of API for filtering
-  Gun.chain.timegraph.range = function timeRange(startRange, stopRange) {
+  Gun.chain.timegraph.range = function timeRange(startDate, stopDate) {
     timeState.range.low = []
     timeState.range.high = []
     timeState.usingRange = true
+    timeState.rangeOrder = '<'
     timeState.cursor = 0
 
-    if (startRange instanceof Date) // TODO: Do magic
-      timeState.range.low = granularDate(startRange)
+    if (startDate instanceof Date) // TODO: Do magic
+      timeState.range.low = granularDate(startDate)
     else
       console.warn('Warning: Improper start Date used for .range()')
 
-    if (stopRange instanceof Date)
-      timeState.range.high = granularDate(stopRange)
+    if (stopDate instanceof Date)
+      timeState.range.high = granularDate(stopDate)
     else
       console.warn('Warning: Improper stop Date used for .range()')
 
-    return this //Gun.chain.timegraph //Gun.chain.timegraph.range
+    return this
+  }
+
+  Gun.chain.timegraph.reverse = function timeReverseRange() {
+    timeState.rangeOrder = '>'
+    return this
   }
 
   Gun.chain.timegraph.first = function timeFirst(count) {
@@ -294,15 +296,17 @@
     // This function is to be used in conjunction with .first/.last or .pause/.resume
   }
 
-  Gun.chain.timegraph.done = function timeDine(cb) {
+  Gun.chain.timegraph.done = function timeDone(cb) {
     // cb will pass new items count since last Gun emit event, potentially along with timegraph of those items. (Requires array or obj, but may be better in user-land)
     // cb(timeState.newItemCount). The reason this is a seperate API method and not part of .range, .first, etc is so that it can be used in the future for other things.
+
+    cb = (cb instanceof Function && cb) || function(){}
+    timeState.done = cb
   }
 
   Gun.chain.timegraph.filter = function timeFilter() {
   }
 
-  // Transformation API
   Gun.chain.timegraph.transform = function timeTransform(cb) {
     // Transforms data from a Gun chain before being passed.
   }
@@ -363,6 +367,7 @@
 
       if (timepoint.soul) {
         // TODO: replace callback state with tp. This will allow .near() and .range(first, last) to be used within callback.
+        timeState.pending--
         return callback(soul, timepoint.soul, timepoint._['>'].soul)
       }
 
@@ -370,13 +375,23 @@
       keys.sort() // FIXME: Key sorting does not working for 10, 11, 01, 02
       depth++
 
+      if (timeState.rangeOrder === '>')
+        keys.reverse()
+
       for (var tpKey of keys) {
         // We already have the amount we asked for, exit from getRange()
         if (timeState.cursor >= timeState.max)
           return
 
+        // TODO: callback latch for .done() event
+        timeState.pending++
         getRange(soul + ':' + tpKey, callback, depth)
       }
+
+      if (timeState.pending === 0)
+        timeState.done()
+
+      timeState.pending--
     })
   }
 
