@@ -25,7 +25,19 @@
     newItemCount: 0,
 
     usingRange: false,
-    pending: 0,
+
+    _pending: 0,
+    get pending() { return timeState._pending },
+    set pending(val ) {
+      timeState._pending = val
+      //console.log(timeState.pending)
+
+      if (timeState._pending === 0)
+        timeState.done()
+
+      return timeState._pending
+    },
+
     cursor: 0,
     max: Infinity,
     rangeOrder: '<',
@@ -169,33 +181,42 @@
   Gun.chain.timegraph.once = function timeOnce(cb, soulOnly) {
     cb = (cb instanceof Function && cb) || function(){}
 
-    gun.get(function(soul) {
-      if (!soul)
-        return cb.call(gun, { err: Gun.log('TimeGraph could not determine soul, please report this!') })
+    setTimeout(function() { // Give app a chance to set up chaining API. (Example .once().done(cb))
+      gun.get(function(soul) {
+        if (!soul)
+          return cb.call(gun, { err: Gun.log('TimeGraph could not determine soul, please report this!') })
 
-      // Default to all timepoints if no range is provided.
-      if (!timeState.usingRange) {
-        timeState.range.low = [-Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity]
-        timeState.range.high = [Infinity, Infinity, Infinity, Infinity, Infinity, Infinity, Infinity]
-      }
+        // Default to all timepoints if no range is provided.
+        if (!timeState.usingRange) {
+          timeState.range.low = [-Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity]
+          timeState.range.high = [Infinity, Infinity, Infinity, Infinity, Infinity, Infinity, Infinity]
+        }
 
-      getRange('timepoint/' + soul, function(timepoint, soul, state) {
-        timeState.cursor++
+        traverse('timepoint/' + soul, function(timepoint, soul, state) {
+          timeState.cursor++
 
-        if (soulOnly)
-          return cb({ '#': soul }, timepoint, state)
+          var tpTime = (timepoint).split(':').slice(1)
+          var dTime = new Date(tpTime[0], tpTime[1] - 1 || 0, tpTime[2] || 1, tpTime[3] || 0, tpTime[4] || 0, tpTime[5] || 0, tpTime[6] || 0)
 
-        root.get(soul).once(function(data) {
-          cb.call(gun.timegraph, data, timepoint, state) // Warning: callback(this) refers to the TimeGraph
+          if (soulOnly) {
+            cb({ '#': soul }, timepoint, dTime.getTime()) //cb({ '#': soul }, timepoint, state)
+            return timeState.pending--
+          }
+
+          root.get(soul).once(function(data) {
+            cb.call(gun.timegraph, data, timepoint, dTime) //cb.call(gun.timegraph, data, timepoint, state) // Warning: callback(this) refers to the TimeGraph
+            timeState.pending--
+          })
         })
-      })
-    }, true)
+      }, true)
+    }, 1)
 
     return this
   }
 
   Gun.chain.timegraph.on = function timeOn(cb, soulOnly) {
     Gun.chain.timegraph.once.apply(this, arguments)
+    // TODO: Implement .on to use backward traversal.
 
     cb = (cb instanceof Function && cb) || function(){}
 
@@ -216,7 +237,8 @@
         if (!withinRange(state, timeState.startDate, timeState.stopDate))
           return
 
-        var stateDate = new Date(state).getTime() // || function userProvided() {}
+        //var stateDate = new Date(state).getTime() // || function userProvided() {}
+        var stateDate = state
         root.get(timegraph.last['#']).once(function(timepoint, key) {
           if (soulOnly)
             return cb({ '#': timepoint.soul }, key, stateDate)
@@ -237,13 +259,8 @@
     // This may be a bug in Gun where calling `.off()` directly after `.once()` results in lost data.
     // See: https://github.com/amark/gun/issues/685
 
+    resetRange()
     cb = (cb instanceof Function && cb) || function(){}
-
-    timeState.range.low = 0
-    timeState.range.high = 0
-    timeState.usingRange = false
-    timeState.rangeOrder = '<'
-
     gun.get(function(soul) {
       if (!soul)
         return cb.call(gun, { err: Gun.log('TimeGraph could not determine soul, please report this!') })
@@ -256,11 +273,7 @@
 
   // Subset of API for filtering
   Gun.chain.timegraph.range = function timeRange(startDate, stopDate) {
-    timeState.range.low = []
-    timeState.range.high = []
-    timeState.usingRange = true
-    timeState.rangeOrder = '<'
-    timeState.cursor = 0
+    resetRange()
 
     if (startDate instanceof Date) // TODO: Do magic
       timeState.range.low = granularDate(startDate)
@@ -335,15 +348,20 @@
     return true
   }
 
-  function getRange(soul, callback, depth) {
+  function traverse(soul, callback, depth) {
     console.log('getOpRange', soul)
 
-    root.get(soul).once(function(timepoint) {
+    root.get(soul).get(function(msg, ev) {
+      var timepoint = msg.put
+      ev.off()
+
       if (!timepoint)
         return
 
       if (!depth)
         depth = 0
+
+      timeState.pending++
 
       // Retrieve all timepoint keys within range.
       var low = timeState.range.low[depth]
@@ -365,11 +383,8 @@
         keys.push(key) // Any given timepoint will realistically only have 60 keys at most. (The only exception is milliseconds, which has up to 1000)
       }
 
-      if (timepoint.soul) {
-        // TODO: replace callback state with tp. This will allow .near() and .range(first, last) to be used within callback.
-        timeState.pending--
+      if (timepoint.soul)
         return callback(soul, timepoint.soul, timepoint._['>'].soul)
-      }
 
       // Recurse to find timepoint souls
       keys.sort() // FIXME: Key sorting does not working for 10, 11, 01, 02
@@ -380,16 +395,13 @@
 
       for (var tpKey of keys) {
         // We already have the amount we asked for, exit from getRange()
-        if (timeState.cursor >= timeState.max)
+        if (timeState.cursor >= timeState.max) {
+          timeState.pending = 0
           return
+        }
 
-        // TODO: callback latch for .done() event
-        timeState.pending++
-        getRange(soul + ':' + tpKey, callback, depth)
+        traverse(soul + ':' + tpKey, callback, depth)
       }
-
-      if (timeState.pending === 0)
-        timeState.done()
 
       timeState.pending--
     })
@@ -424,6 +436,14 @@
     ms.setUTCMilliseconds(date.getUTCMilliseconds())
 
     return [year.getTime(), month.getTime(), day.getTime(), hour.getTime(), mins.getTime(), sec.getTime(), ms.getTime()]
+  }
+
+  function resetRange() {
+    timeState.range.low = []
+    timeState.range.high = []
+    timeState.usingRange = true
+    timeState.rangeOrder = '<'
+    timeState.cursor = 0
   }
 
 
