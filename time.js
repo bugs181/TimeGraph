@@ -353,16 +353,16 @@
         return false
 
     // If startDate only provided
-    if (startRange && startRange > checkRange) {
-      return false
+    if (startRange && startRange <= checkRange) {
+      return true
     }
 
     // if stopDate only provided
-    if (stopRange && stopRange < checkRange) {
-      return false
+    if (stopRange && stopRange >= checkRange) {
+      return true
     }
 
-    return true
+    return false
   }
 
   function traverse(soul, callback, depth) {
@@ -370,7 +370,7 @@
     var root = gun.back(-1)
     var timeState = gun.timeState
 
-    console.log('getOpRange', soul)
+    console.log('traverse', soul)
 
     root.get(soul).get(function(msg, ev) {
       var timepoint = msg.put
@@ -395,10 +395,10 @@
 
         var tp = (soul + ':' + key).split(':').slice(1)
         var d = new Date(tp[0], tp[1] - 1 || 0, tp[2] || 1, tp[3] || 0, tp[4] || 0, tp[5] || 0, tp[6] || 0)
-        var ts = granularDate(d)
+        var ts = granularDate(d, depth)
 
         // Not in range, move to next
-        if (!withinRange(ts[depth], low, high))
+        if (!withinRange(ts, low, high))
           continue
 
         keys.push(key) // Any given timepoint bucket will realistically only have 60 keys at most. (The only exception is milliseconds, which has up to 1000)
@@ -428,34 +428,40 @@
     })
   }
 
-  function granularDate(date) {
+  function granularDate(date, depth) {
     // This method is required for more efficient traversal.
     // It exists, due to the bucket Date() may be outside of range, although technically still in it.
     // For example, with a start range of March 20, 2019 and a stop range of March 21, 2019. The root bucket date returned is just '2019', which has a default of Jaunuary 1, 2019
-    // We break these ranges down into an array; sRange = [year, month, day, hour, min, sec, ms] set appropriately. We check each of these date ranges with a `depth` cursor.
-
-    // TODO: See if there's a more efficient way of doing this.
+    // We break these ranges down into an array; sRange = [year, month, day, hour, min, sec, ms] building off of the former. We check each of these date ranges with a `depth` cursor.
 
     var year = new Date(date.getFullYear().toString())
+    if (typeof depth === 'number' && depth === 0) return year.getTime()
 
     var month = new Date(year)
     month.setUTCMonth(date.getUTCMonth())
+    if (typeof depth === 'number' && depth === 1) return month.getTime()
 
     var day = new Date(month)
     day.setUTCDate(date.getUTCDate())
+    if (typeof depth === 'number' && depth === 2) return day.getTime()
 
     var hour = new Date(day)
     hour.setUTCHours(date.getUTCHours())
+    if (typeof depth === 'number' && depth === 3) return hour.getTime()
 
     var mins = new Date(hour)
     mins.setUTCMinutes(date.getUTCMinutes())
+    if (typeof depth === 'number' && depth === 4) return mins.getTime()
 
     var sec = new Date(mins)
     sec.setUTCSeconds(date.getUTCSeconds())
+    if (typeof depth === 'number' && depth === 5) return sec.getTime()
 
     var ms = new Date(sec)
     ms.setUTCMilliseconds(date.getUTCMilliseconds())
+    if (typeof depth === 'number' && depth === 6) return ms.getTime()
 
+    // We want all of them.
     return [year.getTime(), month.getTime(), day.getTime(), hour.getTime(), mins.getTime(), sec.getTime(), ms.getTime()]
   }
 

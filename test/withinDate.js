@@ -8,7 +8,6 @@ var expect = chai.expect
 
 const Gun = require('gun/gun')
 global.Gun = Gun
-require('../lib/memorystorage')
 require('../time')
 
 const gun = Gun()
@@ -17,8 +16,8 @@ const withinDate = gun.timegraph().withinDate
 
 describe('withinDate function tests:', function() {
   describe('Test Basic Algorithm', function() {
-    perf('No date range provided, should always return true', function(done) {
-      expect(withinDate(1)).to.be.true
+    perf('No date range provided, should always return false', function(done) {
+      expect(withinDate(1)).to.be.false
       done()
     })
 
@@ -52,8 +51,8 @@ describe('withinDate function tests:', function() {
     var yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
     var tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1)
 
-    perf('No date range provided, should always return true', function(done) {
-      expect(withinDate(today)).to.be.true
+    perf('No date range provided, should always return false', function(done) {
+      expect(withinDate(today)).to.be.false
       done()
     }).add()
 
