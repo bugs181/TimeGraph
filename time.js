@@ -1,3 +1,4 @@
+/* eslint-disable no-func-assign */
 /* eslint-disable no-console */
 /* eslint-disable prefer-template */
 ;(function() {
@@ -8,7 +9,7 @@
   if (!Gun)
     throw new Error('TimeGraph is meant to be used with Gun')
 
-  var gun, root
+  //var gun, root
   var ify = Gun.node.ify
 
   // Object to store the state of TimeGraph, range, window/buffer, and other stateful things.
@@ -66,7 +67,11 @@
 
 
   Gun.chain.timegraph = function timegraph(startDateOpt, stopDateOpt) {
-    gun = this, root = gun.back(-1)
+    var gun = this
+
+    // Create a clone of timeState for new API chain.
+    gun.timeState = Object.assign({}, timeState)
+    timeState = gun.timeState
 
     var opts = gun && gun._ && gun._.root && gun._.root.opt
     timeState.enforceData = opts.enforceData
@@ -78,6 +83,7 @@
       timeState.stopDate = new Date(stopDateOpt).getTime()
 
     // Generic proxy for re-routing Gun methods.
+    Gun.chain._put = Gun.chain.put
     Gun.chain.timegraph.get = methodProxy(gun, 'get')
     Gun.chain.timegraph.set = methodProxy(gun, 'set')
     Gun.chain.timegraph.map = methodProxy(gun, 'map')
@@ -86,11 +92,17 @@
     Gun.chain.timegraph.withinDate = withinRange
     Gun.chain.timegraph.withinRange = withinRange
 
+    // Bind Helper functions
+    traverse = traverse.bind(gun)
+    resetRange = resetRange.bind(gun)
+
     return gunProxy(gun, Gun.chain.timegraph)
   }
 
 
   Gun.chain.timegraph.time = function time(data, cb) {
+    var gun = this
+
     if (data instanceof Function) {
       cb = data
       return Gun.chain.timegraph.on.call(this, cb, true)
@@ -101,6 +113,8 @@
 
   Gun.chain.timegraph.put = function timePut(data, cb, as, rSoul) {
     var gunCtx = this
+    var gun = this.back(1)
+    var root = gun.back(-1)
 
     if (Gun.is(data)) {
       data.get(function(soul) {
@@ -115,9 +129,9 @@
     gun.get(function(soul) {
       // This fixes odd behavior like .set(), because .set does not have a soul on first .put. Passing soul to gun.put() creates weird behavior, so not a solution.
       if (!soul)
-        return gun.timegraph.put.call(gunCtx, gun.put.call(gunCtx, data, null, as), cb)
+        return gun.timegraph.put.call(gunCtx, gunCtx._put.call(gunCtx, data, null, as), cb)
 
-      gun.put.call(gunCtx, data, cb, as)
+      gunCtx._put.call(gunCtx, data, cb, as)
 
       // Last ditch effort to find soul for TimeGraph
       if (!rSoul)
@@ -164,15 +178,8 @@
       var time = ify({}, t.join(':'))
       time[tmp] = year
 
-      var timepoint = time //milli //time
+      var timepoint = time
       root.put.call(root, { last: milli, timepoint, soul }, 'timegraph/' + soul)
-
-      //timeState.graph.high = d.getTime()
-      //timeState.graphKey.high = milliSoul
-
-      // TODO: Can we use node().not() to insert `first` prop above? Then chain off of that?
-      // root.not().put.call(root, { first: milli }, 'timegraph/' + soul)
-      // Scratch this idea. .put performance is more important than querying..
     }, true)
 
     return gunCtx
@@ -180,6 +187,10 @@
 
   Gun.chain.timegraph.once = function timeOnce(cb, soulOnly) {
     cb = (cb instanceof Function && cb) || function(){}
+
+    var gun = this
+    var root = gun.back(-1)
+    var timeState = gun.timeState
 
     setTimeout(function() { // Give app a chance to set up chaining API. (Example .once().done(cb))
       gun.get(function(soul) {
@@ -220,6 +231,8 @@
 
     cb = (cb instanceof Function && cb) || function(){}
 
+    var gun = this, root = gun.back(-1)
+
     gun.get(function(soul) {
       if (!soul)
         return cb.call(gun, { err: Gun.log('TimeGraph could not determine soul, please report this!') })
@@ -259,6 +272,8 @@
     // This may be a bug in Gun where calling `.off()` directly after `.once()` results in lost data.
     // See: https://github.com/amark/gun/issues/685
 
+    var gun = this, root = gun.back(-1)
+
     resetRange()
     cb = (cb instanceof Function && cb) || function(){}
     gun.get(function(soul) {
@@ -273,7 +288,9 @@
 
   // Subset of API for filtering
   Gun.chain.timegraph.range = function timeRange(startDate, stopDate) {
+    var timeState = this.timeState
     resetRange()
+    timeState.usingRange = true
 
     if (startDate instanceof Date) // TODO: Do magic
       timeState.range.low = granularDate(startDate)
@@ -349,6 +366,10 @@
   }
 
   function traverse(soul, callback, depth) {
+    var gun = this
+    var root = gun.back(-1)
+    var timeState = gun.timeState
+
     console.log('getOpRange', soul)
 
     root.get(soul).get(function(msg, ev) {
@@ -380,14 +401,14 @@
         if (!withinRange(ts[depth], low, high))
           continue
 
-        keys.push(key) // Any given timepoint will realistically only have 60 keys at most. (The only exception is milliseconds, which has up to 1000)
+        keys.push(key) // Any given timepoint bucket will realistically only have 60 keys at most. (The only exception is milliseconds, which has up to 1000)
       }
 
       if (timepoint.soul)
         return callback(soul, timepoint.soul, timepoint._['>'].soul)
 
       // Recurse to find timepoint souls
-      keys.sort() // FIXME: Key sorting does not working for 10, 11, 01, 02
+      keys.sort()
       depth++
 
       if (timeState.rangeOrder === '>')
@@ -409,9 +430,9 @@
 
   function granularDate(date) {
     // This method is required for more efficient traversal.
-    // It exists, due to the root Date() may be outside of range, although technically still in it.
-    // For example, with a start range of March 20, 2019 and a stop range of March 21, 2019. The root date returned is just '2019', which has a default of Jaunuary 1, 2019
-    // We break these ranges down into an array so sRange = [year, month, day, hour, min, sec, ms] set appropriately. We check each of these date ranges with a `depth` cursor.
+    // It exists, due to the bucket Date() may be outside of range, although technically still in it.
+    // For example, with a start range of March 20, 2019 and a stop range of March 21, 2019. The root bucket date returned is just '2019', which has a default of Jaunuary 1, 2019
+    // We break these ranges down into an array; sRange = [year, month, day, hour, min, sec, ms] set appropriately. We check each of these date ranges with a `depth` cursor.
 
     // TODO: See if there's a more efficient way of doing this.
 
@@ -439,9 +460,10 @@
   }
 
   function resetRange() {
+    var timeState = this.timeState
     timeState.range.low = []
     timeState.range.high = []
-    timeState.usingRange = true
+    timeState.usingRange = false
     timeState.rangeOrder = '<'
     timeState.cursor = 0
   }
